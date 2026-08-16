@@ -33,17 +33,27 @@ def database_uri() -> str:
     return raw
 
 
+def _truthy(name: str, default: str = "") -> bool:
+    return os.environ.get(name, default).lower() in ("1", "true", "yes")
+
+
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or os.environ.get("TEORIA_SECRET") or "dev-only-key"
     SQLALCHEMY_DATABASE_URI = database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {}
-    if SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
-        SQLALCHEMY_ENGINE_OPTIONS = {"connect_args": {"check_same_thread": False}}
+    SQLALCHEMY_ENGINE_OPTIONS = (
+        {"connect_args": {"check_same_thread": False}}
+        if SQLALCHEMY_DATABASE_URI.startswith("sqlite")
+        else {"pool_pre_ping": True, "pool_recycle": 300}
+    )
 
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_SECURE = os.environ.get("TEORIA_SECURE_COOKIES", "").lower() in ("1", "true", "yes")
+    SESSION_COOKIE_SECURE = _truthy("TEORIA_SECURE_COOKIES")
     REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
     WTF_CSRF_TIME_LIMIT = 60 * 60 * 8
     WTF_CSRF_ENABLED = os.environ.get("TEORIA_CSRF", "1") != "0"
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") or (
+        "https" if SESSION_COOKIE_SECURE else "http"
+    )
