@@ -6,11 +6,11 @@
 <div class="page-head">
   <div>
     <h1>შეცდომები</h1>
-    <p class="sub">{{ pending }} ბილეთი ელოდება გამეორებას. ბილეთი „დაუჭერად“ ითვლება ორი ზედიზედ სწორი პასუხის შემდეგ.</p>
+    <p class="sub">{{ pending }} ბილეთი ელოდება გამეორებას. ბილეთი „გაგებულად“ ითვლება ზედიზედ ორი სწორი პასუხის შემდეგ.</p>
   </div>
   <form method="post" action="{{ url_for('new_review') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <button class="btn btn-primary" {{ 'disabled' if not pending }}>შეცდომების გამოცდის გენერაცია</button>
+    <button class="btn btn-primary" {{ 'disabled' if not pending }}>შეცდომებით გამოცდის გენერაცია</button>
   </form>
 </div>
 
@@ -27,7 +27,7 @@
     </div>
     <div class="row-side">
       <span class="chip chip-fail">{{ t.wrong }}x შეცდომა</span>
-      {% if t.mastered %}<span class="chip chip-pass">დაუჭერა</span>
+      {% if t.mastered %}<span class="chip chip-pass">გაგებული</span>
       {% else %}<span class="chip chip-warn">გამეორება</span>{% endif %}
     </div>
   </div>
