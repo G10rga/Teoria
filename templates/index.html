@@ -4,8 +4,8 @@
 {% block content %}
 <div class="page-head">
   <div>
-    <h1>ციკლი {{ cycle }} · {{ cards|length }} გამოცდა</h1>
-    <p class="sub">{{ stats.total }} ბილეთი გადანაწილებულია გამეორების გარეშე — ერთი ბილეთი მხოლოდ ერთ გამოცდაშია.</p>
+    <h1>გადანაწილება {{ cycle }} · {{ cards|length }} გამოცდა</h1>
+    <p class="sub">{{ stats.total }} ბილეთი გადანაწილებულია გამეორების გარეშე ანუ ერთი ბილეთი მხოლოდ ერთ გამოცდაშია.</p>
   </div>
   <div style="display:flex; gap:10px; flex-wrap:wrap">
     <form method="post" action="{{ url_for('new_review') }}">
@@ -13,9 +13,9 @@
       <button class="btn" {{ 'disabled' if not pending }}>შეცდომების გამოცდა ({{ pending }})</button>
     </form>
     <form method="post" action="{{ url_for('new_cycle') }}"
-          onsubmit="return confirm('ახალი ციკლი თავიდან არევს 921 ბილეთს. გავაგრძელოთ?')">
+          onsubmit="return confirm('ახალი გადანაწილება თავიდან არევს 921 ბილეთს. გავაგრძელოთ?')">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button class="btn btn-ghost">ახალი ციკლი</button>
+      <button class="btn btn-ghost">ახალი გადანაწილება</button>
     </form>
   </div>
 </div>

@@ -14,9 +14,9 @@
   <input type="search" name="q" value="{{ query }}" placeholder="ძიება კითხვაში ან ბილეთის ნომერი">
   <select name="state" class="btn" onchange="this.form.submit()">
     <option value="all" {{ 'selected' if state == 'all' }}>ყველა</option>
-    <option value="unseen" {{ 'selected' if state == 'unseen' }}>ნახვა არ მიხდენია</option>
+    <option value="unseen" {{ 'selected' if state == 'unseen' }}>უნახავი</option>
     <option value="wrong" {{ 'selected' if state == 'wrong' }}>შეცდომებით</option>
-    <option value="mastered" {{ 'selected' if state == 'mastered' }}>დაუჭერი</option>
+    <option value="mastered" {{ 'selected' if state == 'mastered' }}>გაგებული</option>
   </select>
   <button class="btn">გაფილტრვა</button>
 </form>
@@ -29,9 +29,9 @@
       <p>{{ t.question }}</p>
     </div>
     <div class="row-side">
-      {% if t.mastered %}<span class="chip chip-pass">დაუჭერა</span>
+      {% if t.mastered %}<span class="chip chip-pass">გაგებული</span>
       {% elif t.wrong %}<span class="chip chip-fail">{{ t.wrong }}x შეცდომა</span>
-      {% elif t.seen %}<span class="chip">ნახული</span>
+      {% elif t.seen %}<span class="chip">ნანახი</span>
       {% else %}<span class="chip chip-new">ახალი</span>{% endif %}
     </div>
   </div>
