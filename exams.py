@@ -16,7 +16,7 @@ from models import (
 )
 
 QUESTIONS_PER_EXAM = 30
-MAX_ERRORS = 3
+MAX_ERRORS = 5
 TIME_LIMIT_MIN = 30
 
 

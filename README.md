@@ -91,7 +91,7 @@ An existing local `prava.db` is still opened if `teoria.db` is missing.
 ## Users, history, and review exams
 
 - Registration / login is required. Each user has their own exam cycles, attempts, and stats.
-- Finished attempts are stored with a pass/fail flag (`passed` when mistakes ≤ 3).
+- Finished attempts are stored with a pass/fail flag (`passed` when mistakes ≤ 5).
 - Every wrong or blank answer is stored in `failed_questions` and counted on `ticket_stats`.
 - **შეცდომების გამოცდა** builds a 30-question exam from that user's open mistakes
   (most wrong first). Unseen tickets fill the rest if the pool is short.
@@ -110,7 +110,7 @@ so they drop out of later review exams.
 ## Exam rules
 
 - 30 questions, 30-minute countdown, auto-submit at 0.
-- 3 or fewer mistakes = pass. Unanswered counts as wrong.
+- 5 or fewer mistakes = pass. Unanswered counts as wrong.
 - Question text is in its own box; answers stay on the image cover.
 - Exam mode grades on the server and does not send the answer key to the browser.
   Practice mode still reveals the key so it can highlight immediately.
