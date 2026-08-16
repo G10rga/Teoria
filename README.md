@@ -111,7 +111,7 @@ so they drop out of later review exams.
 
 - 30 questions, 30-minute countdown, auto-submit at 0.
 - 5 or fewer mistakes = pass. Unanswered counts as wrong.
-- Question text is in its own box; answers stay on the image cover.
+- Question text is in its own box; answers sit below the image and grow with the text.
 - Exam mode grades on the server and does not send the answer key to the browser.
   Practice mode still reveals the key so it can highlight immediately.
 - Keyboard: `1`-`4` answer, `←` / `→` navigate.
