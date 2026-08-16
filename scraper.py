@@ -6,8 +6,10 @@ Usage
     python scraper.py parse                 # parse html_cache/ into teoria.db (no network)
     python scraper.py scrape                # fetch + parse in one go
     python scraper.py inspect --page 1      # dump structure of one ticket block (debug)
-    python scraper.py check                 # report tickets with no correct answer
-    python scraper.py answers key.csv       # import an answer key: ticket_id,correct_index
+    python scraper.py check                            # report tickets missing a correct answer
+    python scraper.py answers key.csv                  # import an answer key: ticket_id,correct_index
+    python scraper.py repair                           # re-fetch tickets with no key or dropped one-letter options (e.g. "I")
+    python scraper.py repair --ticket 653              # refresh one ticket
 
 Why the two-step design: HTML is cached on disk, so re-parsing after a selector
 fix costs zero extra requests to the site.
@@ -248,7 +250,9 @@ def _extract_answers(container: Tag) -> tuple[list[str], int | None]:
     texts, correct = [], None
     for node in _answer_nodes(container):
         text = _answer_text(node)
-        if not text or len(text) < 2:
+        # keep one-character answers such as Roman "I"; empty slots are already
+        # filtered via ans-empty
+        if not text:
             continue
         if _item_is_correct(node):
             correct = len(texts)
@@ -552,15 +556,80 @@ def cmd_answers(path: str) -> None:
     print(f"updated {updated} tickets")
 
 
+def _looks_like_dropped_short_answer(answers: list) -> bool:
+    """True if Roman numeral I was likely discarded (len < 2 filter)."""
+    labels = [str(a).strip() for a in answers]
+    if "I" in labels:
+        return False
+    return any(a in labels for a in ("II", "III", "IV", "VI", "VII", "VIII", "IX"))
+
+
+def refresh_tickets(ids: list[int], category_label: str, with_images: bool = True) -> int:
+    """Re-fetch individual ticket pages and upsert them."""
+    from models import Ticket
+    db.init_db()
+    http = requests.Session()
+    http.headers.update(HEADERS)
+    updated = 0
+    with db.connect() as session:
+        for tid in ids:
+            url = f"{BASE}/tickets?ticket={tid}"
+            try:
+                resp = http.get(url, timeout=30)
+                resp.raise_for_status()
+            except Exception as exc:                              # noqa: BLE001
+                print(f"  #{tid} fetch failed: {exc}", file=sys.stderr)
+                continue
+            parsed = parse_html(resp.text, category_label)
+            hit = next((t for t in parsed if t["id"] == tid), None)
+            if hit is None and parsed:
+                hit = parsed[0]
+            if hit is None:
+                print(f"  #{tid} not found in page", file=sys.stderr)
+                continue
+            existing = session.get(Ticket, tid)
+            image_url = hit.pop("image_url", None)
+            image = download_image(image_url, hit["id"], http) if with_images else None
+            if not image and existing is not None:
+                image = existing.image
+            hit["image"] = image
+            db.upsert_ticket(hit, session=session)
+            updated += 1
+            print(f"  #{hit['id']}: {len(hit['answers'])} answers, correct={hit['correct_index']}")
+            time.sleep(0.4)
+    print(f"refreshed {updated}/{len(ids)} tickets")
+    return updated
+
+
+def cmd_repair(category_label: str, ticket_id: int | None, with_images: bool) -> None:
+    from models import Ticket
+    db.init_db()
+    if ticket_id is not None:
+        ids = [ticket_id]
+    else:
+        with db.connect() as session:
+            ids = [
+                t.id for t in session.query(Ticket).all()
+                if t.correct_index is None or _looks_like_dropped_short_answer(t.answers)
+            ]
+    if not ids:
+        print("no tickets need a short-answer repair")
+        return
+    print(f"repairing {len(ids)} tickets")
+    refresh_tickets(ids, category_label, with_images)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="teoria.on.ge ticket scraper")
     parser.add_argument("command",
-                        choices=["fetch", "parse", "scrape", "inspect", "check", "answers"])
+                        choices=["fetch", "parse", "scrape", "inspect", "check",
+                                 "answers", "repair"])
     parser.add_argument("key_file", nargs="?", help="CSV file for the `answers` command")
     parser.add_argument("--category", type=int, default=2, help="2 = B, B1 (default)")
     parser.add_argument("--label", default="B", help="category label stored in the DB")
     parser.add_argument("--pages", type=int, default=47)
     parser.add_argument("--page", type=int, default=1, help="page for `inspect`")
+    parser.add_argument("--ticket", type=int, help="ticket id for `repair`")
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between requests")
     parser.add_argument("--force", action="store_true", help="re-download cached pages")
     parser.add_argument("--no-images", action="store_true")
@@ -579,6 +648,8 @@ def main() -> None:
         if not args.key_file:
             sys.exit("usage: python scraper.py answers key.csv")
         cmd_answers(args.key_file)
+    if args.command == "repair":
+        cmd_repair(args.label, args.ticket, not args.no_images)
 
 
 if __name__ == "__main__":
