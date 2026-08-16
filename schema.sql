@@ -1,76 +1,94 @@
 -- Prava: Georgian driving theory exam trainer
--- SQLite schema
+-- Schema is created by SQLAlchemy (models.py). This file documents the tables.
 
-PRAGMA journal_mode = WAL;
-
+-- Shared question bank (all users)
 CREATE TABLE IF NOT EXISTS tickets (
-    id            INTEGER PRIMARY KEY,          -- ticket number on teoria.on.ge
+    id            INTEGER PRIMARY KEY,
     category      TEXT    NOT NULL DEFAULT 'B',
     question      TEXT    NOT NULL,
-    answers_json  TEXT    NOT NULL,             -- JSON array of answer strings
-    correct_index INTEGER,                      -- 0-based; NULL = unknown (needs scraping fix)
-    image         TEXT,                         -- relative path under static/, or NULL
-    layout        TEXT,                         -- site layout classes: cutoff-N answers-num-N ...
+    answers_json  TEXT    NOT NULL,
+    correct_index INTEGER,
+    image         TEXT,
+    layout        TEXT,
     explanation   TEXT,
     source_url    TEXT,
-    imported_at   TEXT
+    imported_at   DATETIME
 );
 
--- One row per generated exam. A "cycle" is a full shuffle of the whole bank:
--- 921 tickets -> 30 exams of 30 + 1 exam of 21 = 31 exams, zero repeats.
+CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY,
+    username      TEXT    NOT NULL UNIQUE,
+    email         TEXT    NOT NULL UNIQUE,
+    password_hash TEXT    NOT NULL,
+    created_at    DATETIME NOT NULL,
+    last_login_at DATETIME
+);
+
+-- One generated exam per user. A cycle partitions the bank with no repeats.
 CREATE TABLE IF NOT EXISTS exams (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    id         INTEGER PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     cycle      INTEGER NOT NULL DEFAULT 1,
-    number     INTEGER,                         -- 1..31 inside the cycle (NULL for review exams)
-    kind       TEXT    NOT NULL DEFAULT 'base', -- 'base' | 'review'
+    number     INTEGER,
+    kind       TEXT    NOT NULL DEFAULT 'base',
     seed       TEXT,
-    created_at TEXT    NOT NULL
+    created_at DATETIME NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS exam_tickets (
     exam_id   INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
-    position  INTEGER NOT NULL,                 -- 1..30
+    position  INTEGER NOT NULL,
     ticket_id INTEGER NOT NULL REFERENCES tickets(id),
     PRIMARY KEY (exam_id, position)
 );
 
 CREATE TABLE IF NOT EXISTS attempts (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    id            INTEGER PRIMARY KEY,
+    user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     exam_id       INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
-    mode          TEXT    NOT NULL DEFAULT 'exam',   -- 'exam' | 'practice'
-    started_at    TEXT    NOT NULL,
-    finished_at   TEXT,
+    mode          TEXT    NOT NULL DEFAULT 'exam',
+    started_at    DATETIME NOT NULL,
+    finished_at   DATETIME,
     correct_count INTEGER,
     wrong_count   INTEGER,
-    passed        INTEGER,                           -- 0/1
+    passed        BOOLEAN,
     seconds_spent INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS attempt_answers (
     attempt_id   INTEGER NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
     ticket_id    INTEGER NOT NULL REFERENCES tickets(id),
-    chosen_index INTEGER,                            -- NULL = left blank
-    is_correct   INTEGER,
-    answered_at  TEXT,
+    chosen_index INTEGER,
+    is_correct   BOOLEAN,
+    answered_at  DATETIME,
     PRIMARY KEY (attempt_id, ticket_id)
 );
 
--- Per-ticket learning state, the thing that drives review exams.
+-- Per-user learning state; review exams are built from wrong > 0 AND mastered = 0.
 CREATE TABLE IF NOT EXISTS ticket_stats (
-    ticket_id      INTEGER PRIMARY KEY REFERENCES tickets(id),
+    user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ticket_id      INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
     seen           INTEGER NOT NULL DEFAULT 0,
     wrong          INTEGER NOT NULL DEFAULT 0,
     right_count    INTEGER NOT NULL DEFAULT 0,
     correct_streak INTEGER NOT NULL DEFAULT 0,
-    mastered       INTEGER NOT NULL DEFAULT 0,
-    last_seen      TEXT
+    mastered       BOOLEAN NOT NULL DEFAULT 0,
+    last_seen      DATETIME,
+    PRIMARY KEY (user_id, ticket_id)
+);
+
+-- Individual wrong/blank answers, resolved when the ticket is mastered.
+CREATE TABLE IF NOT EXISTS failed_questions (
+    id           INTEGER PRIMARY KEY,
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ticket_id    INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+    attempt_id   INTEGER NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
+    chosen_index INTEGER,
+    created_at   DATETIME NOT NULL,
+    resolved_at  DATETIME
 );
 
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
-
-CREATE INDEX IF NOT EXISTS idx_exam_tickets_ticket ON exam_tickets(ticket_id);
-CREATE INDEX IF NOT EXISTS idx_attempts_exam ON attempts(exam_id);
-CREATE INDEX IF NOT EXISTS idx_stats_wrong ON ticket_stats(wrong DESC, mastered);

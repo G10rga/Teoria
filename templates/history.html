@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% set active = 'history' %}
+{% block title %}ისტორია · პრავა{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>გამოცდების ისტორია</h1>
+    <p class="sub">ჩაბარებული და ჩაჭრილი გამოცდები. შეცდომების გამოცდა იკრიბება {{ pending }} ბილეთიდან.</p>
+  </div>
+  <form method="post" action="{{ url_for('new_review') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-primary" {{ 'disabled' if not pending }}>შეცდომების გამოცდა ({{ pending }})</button>
+  </form>
+</div>
+
+<form class="filters" method="get">
+  <select name="status" class="btn" onchange="this.form.submit()">
+    <option value="all" {{ 'selected' if status == 'all' }}>ყველა</option>
+    <option value="passed" {{ 'selected' if status == 'passed' }}>ჩაბარებული</option>
+    <option value="failed" {{ 'selected' if status == 'failed' }}>ჩაჭრილი</option>
+  </select>
+</form>
+
+{% if not items %}
+<div class="card"><b>ისტორია ცარიელია.</b><p class="sub">დაასრულეთ პირველი გამოცდა.</p></div>
+{% endif %}
+
+<div class="list">
+  {% for a in items %}
+  <a class="row" href="{{ url_for('result', attempt_id=a.id) }}">
+    <div class="row-main">
+      <b>{% if a.kind == 'review' %}შეცდომების გამოცდა{% else %}გამოცდა #{{ a.number }}{% endif %}</b>
+      <p>{{ a.finished_at|ka_date }}{% if a.seconds_spent %} · {{ a.seconds_spent // 60 }} წუთი{% endif %}</p>
+    </div>
+    <div class="row-side">
+      <span class="chip {{ 'chip-pass' if a.passed else 'chip-fail' }}">
+        {{ 'ჩაბარებული' if a.passed else 'ჩაჭრილი' }}
+        · {{ a.correct_count }} სწორი · {{ a.wrong_count }} შეცდომა
+      </span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -9,14 +9,23 @@
   </div>
   <div style="display:flex; gap:10px; flex-wrap:wrap">
     <form method="post" action="{{ url_for('new_review') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn" {{ 'disabled' if not pending }}>შეცდომების გამოცდა ({{ pending }})</button>
     </form>
     <form method="post" action="{{ url_for('new_cycle') }}"
           onsubmit="return confirm('ახალი ციკლი თავიდან არევს 921 ბილეთს. გავაგრძელოთ?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn btn-ghost">ახალი ციკლი</button>
     </form>
   </div>
 </div>
+
+{% if error %}
+<div class="banner">
+  <span>⚠️</span>
+  <div>{{ error }}</div>
+</div>
+{% endif %}
 
 {% if stats.missing_key %}
 <div class="banner">
@@ -62,6 +71,7 @@
       {{ card.size }} კითხვა{% if card.tries %} · საუკეთესო {{ card.best }}/{{ card.size }}{% endif %}
     </div>
     <form method="post" action="{{ url_for('start_exam', exam_id=card.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn {{ 'btn-primary' if card.status == 'new' }} btn-sm">
         {{ 'დაწყება' if card.status == 'new' else 'თავიდან' }}
       </button>
@@ -84,6 +94,7 @@
         <span class="chip {{ 'chip-pass' if r.ever_passed else 'chip-fail' }}">{{ r.best }}/{{ r.size }}</span>
       {% endif %}
       <form method="post" action="{{ url_for('start_exam', exam_id=r.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn btn-sm">გახსნა</button>
       </form>
     </div>

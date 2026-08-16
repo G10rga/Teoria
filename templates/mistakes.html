@@ -9,6 +9,7 @@
     <p class="sub">{{ pending }} ბილეთი ელოდება გამეორებას. ბილეთი „დაუჭერად“ ითვლება ორი ზედიზედ სწორი პასუხის შემდეგ.</p>
   </div>
   <form method="post" action="{{ url_for('new_review') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="btn btn-primary" {{ 'disabled' if not pending }}>შეცდომების გამოცდის გენერაცია</button>
   </form>
 </div>
