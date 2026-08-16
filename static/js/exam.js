@@ -1,6 +1,5 @@
 /* Exam runner: one ticket at a time, autosave to the server, 30-min timer.
-   The ticket is drawn the way teoria.on.ge draws it: the answers sit in an
-   opaque cover pinned to the bottom of the ticket image. */
+   Answers sit under the ticket image so long text does not cover the scene. */
 (function () {
   const root = document.getElementById('runner');
   if (!root) return;
