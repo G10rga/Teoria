@@ -1,4 +1,4 @@
-# პრავა — B/B1 theory trainer
+# Teoria — B/B1 theory trainer
 
 A local Flask app that turns the 921 category-2 (B, B1) tickets from teoria.on.ge into
 **31 exams that partition the whole bank**: every ticket appears in exactly one exam
@@ -9,7 +9,7 @@ all 921 tickets are answered correctly.
 ## Setup
 
 ```bash
-cd prava
+cd teoria
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -58,7 +58,7 @@ python seed_demo.py    # 921 synthetic tickets + cycle 1
 python app.py          # http://127.0.0.1:5000
 ```
 
-Env vars: `PRAVA_DB` (default `prava.db`), `PRAVA_SECRET`, `PORT`.
+Env vars: `teoria_DB` (default `teoria.db`), `teoria_SECRET`, `PORT`.
 
 ## How the randomness works
 
