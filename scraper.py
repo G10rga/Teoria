@@ -3,7 +3,7 @@
 Usage
 -----
     python scraper.py fetch                 # download all 47 pages of HTML into html_cache/
-    python scraper.py parse                 # parse html_cache/ into prava.db (no network)
+    python scraper.py parse                 # parse html_cache/ into teoria.db (no network)
     python scraper.py scrape                # fetch + parse in one go
     python scraper.py inspect --page 1      # dump structure of one ticket block (debug)
     python scraper.py check                 # report tickets with no correct answer

@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<title>{% block title %}პრავა · B, B1 ტესტები{% endblock %}</title>
+<title>{% block title %}თეორია · B, B1 ტესტები{% endblock %}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
 <body>
 <header class="topbar">
   <a class="brand" href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('login') }}">
-    <span class="brand-mark">P</span>
-    <span>პრავა <span class="muted">/ B, B1</span></span>
+    <span class="brand-mark">T</span>
+    <span>თეორია <span class="muted">/ B, B1</span></span>
   </a>
   <nav>
     {% if current_user.is_authenticated %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}გამოცდა · პრავა{% endblock %}
+{% block title %}გამოცდა · თეორია{% endblock %}
 
 {% block body %}
 <main class="runner" id="runner"
@@ -13,7 +13,8 @@
       <div>
         <b>{% if exam.kind == 'review' %}შეცდომების გამოცდა{% else %}გამოცდა #{{ exam.number }}{% endif %}</b>
         <span class="muted">· პასუხი: <span id="answered-count">0 / {{ count }}</span></span>
-        <span class="muted" id="error-count"></span>
+        <span class="score-ok" id="correct-count">სწორი: 0</span>
+        <span class="score-bad" id="error-count">შეცდომა: 0 / {{ MAX_ERRORS }}</span>
       </div>
       <div style="display:flex; align-items:center; gap:16px">
         <span class="timer" id="timer">30:00</span>

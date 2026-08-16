@@ -1,4 +1,4 @@
-"""Prava - Georgian driving theory trainer (Flask).
+"""Teoria - Georgian driving theory trainer (Flask).
 
 Local:
     python app.py            # http://127.0.0.1:5000
@@ -173,25 +173,19 @@ def register_routes(app: Flask) -> None:
             a.ticket_id: a.chosen_index
             for a in attempt.answers
         }
-        reveal = attempt.mode == "practice"
         payload = []
         for t in tickets:
-            item = {
+            payload.append({
                 "id": t["id"],
                 "question": t["question"],
                 "answers": t["answers"],
+                "correct": t["correct_index"],
                 "image": url_for("static", filename=t["image"]) if t["image"] else None,
                 "layout": t.get("layout"),
                 "source": t["source_url"],
                 "chosen": saved.get(t["id"]),
-            }
-            if reveal:
-                item["correct"] = t["correct_index"]
-                item["explanation"] = t["explanation"]
-            else:
-                item["correct"] = None
-                item["explanation"] = None
-            payload.append(item)
+                "explanation": t["explanation"] if attempt.mode == "practice" else None,
+            })
         return render_template(
             "exam.html", attempt=attempt, exam=exam,
             questions_json=json.dumps(payload, ensure_ascii=False),

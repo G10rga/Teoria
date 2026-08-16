@@ -20,46 +20,23 @@ pip install -r requirements.txt
 
 Copy `.env.example` to `.env` and set `SECRET_KEY` before you deploy.
 
-### 1. Get the tickets
+### Tickets
+
+Images live in `static/tickets/`. Question text is stored in the database. Import once:
 
 ```bash
-python scraper.py scrape --pages 47 --delay 1.0   # download + parse all 47 pages
-python scraper.py check                            # report tickets missing a correct answer
-```
-
-The scraper caches raw HTML in `html_cache/`, so re-parsing is free:
-
-```bash
-python scraper.py parse
-python scraper.py inspect --page 1
-```
-
-The parser reads each `div.ticket-container`; options are `.t-answer` / `.t-a-num` / `.t-a-text`.
-The answer key is the `data-is-correct-list` attribute on the ticket block. `python test_parser.py`
-runs offline unit tests over that markup.
-
-Fallback key import:
-
-```bash
-python scraper.py answers key.csv   # ticket_id,correct_index  (0-based or 1-based)
-```
-
-### 2. Try the UI without scraping
-
-```bash
-python seed_demo.py    # 921 synthetic tickets (no user cycle yet)
-python app.py          # http://127.0.0.1:5000
+python scraper.py scrape --pages 47 --delay 1.0
 ```
 
 Register an account. The first dashboard visit generates that user's cycle of 31 exams.
 
-### 3. Run locally
+### Run locally
 
 ```bash
 python app.py          # http://127.0.0.1:5000
 ```
 
-### 4. Deploy
+### Deploy
 
 Set `SECRET_KEY`. For a hosted Postgres database set `DATABASE_URL`. Then:
 
@@ -67,21 +44,19 @@ Set `SECRET_KEY`. For a hosted Postgres database set `DATABASE_URL`. Then:
 gunicorn wsgi:app --bind 0.0.0.0:$PORT
 ```
 
-A `Procfile` is included for Render / Railway / Heroku-style hosts. After first deploy, either
-run `python scraper.py parse` against cached HTML (or scrape once) so the ticket table is filled,
-or ship a SQLite file / Postgres dump that already contains `tickets`.
+A `Procfile` is included for Render / Railway / Heroku-style hosts. After first deploy,
+run `python scraper.py scrape` once (or restore a database dump) so the `tickets` table is filled.
 
 Env vars:
 
 | Variable | Purpose |
 | --- | --- |
-| `SECRET_KEY` / `PRAVA_SECRET` | Flask session signing. Required when `DATABASE_URL` is set. |
-| `DATABASE_URL` / `PRAVA_DB` | SQLAlchemy URL or a SQLite file path. Default: `prava.db`. |
-| `PRAVA_SECURE_COOKIES` | `1` behind HTTPS so the session cookie is Secure. |
+| `SECRET_KEY` | Flask session signing. Required in production. |
+| `DATABASE_URL` | SQLAlchemy URL. Default local file is `teoria.db` (not in git). |
+| `TEORIA_SECURE_COOKIES` | `1` behind HTTPS so the session cookie is Secure. |
 | `PORT` | `app.run` and Procfile bind port. |
 
-An existing single-user `prava.db` is upgraded in place. The first account you register
-inherits leftover exam history.
+An existing local `prava.db` is still opened if `teoria.db` is missing.
 
 ## Users, history, and review exams
 
@@ -110,21 +85,6 @@ so they drop out of later review exams.
 - Exam mode grades on the server and does not send the answer key to the browser.
   Practice mode still reveals the key so it can highlight immediately.
 - Keyboard: `1`-`4` answer, `←` / `→` navigate.
-
-## Files
-
-| File | Purpose |
-| --- | --- |
-| `app.py` | Flask factory, auth, exam routes, JSON API |
-| `models.py` | SQLAlchemy models: users, tickets, exams, attempts, stats |
-| `exams.py` | cycle generation, review exams, grading, stats |
-| `db.py` | engine, schema bootstrap, ticket upserts |
-| `config.py` | database URL, cookies, secrets |
-| `wsgi.py` | `gunicorn wsgi:app` |
-| `schema.sql` | documented table shapes |
-| `scraper.py` | fetch / parse / check / answers |
-| `seed_demo.py` | synthetic tickets for UI testing |
-| `templates/`, `static/` | UI |
 
 ## Notes
 
