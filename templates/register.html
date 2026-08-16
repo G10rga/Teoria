@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}რეგისტრაცია · პრავა{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <h1>რეგისტრაცია</h1>
+  <p class="sub">შექმენით ანგარიში — გამოცდები, შეცდომები და ისტორია თქვენზეა მიბმული.</p>
+  <form method="post" class="card auth-card">
+    {{ form.hidden_tag() }}
+    <label class="field">
+      <span>{{ form.username.label.text }}</span>
+      {{ form.username(class="input", autocomplete="username") }}
+      {% for err in form.username.errors %}<small class="error">{{ err }}</small>{% endfor %}
+    </label>
+    <label class="field">
+      <span>{{ form.email.label.text }}</span>
+      {{ form.email(class="input", type="email", autocomplete="email") }}
+      {% for err in form.email.errors %}<small class="error">{{ err }}</small>{% endfor %}
+    </label>
+    <label class="field">
+      <span>{{ form.password.label.text }}</span>
+      {{ form.password(class="input", autocomplete="new-password") }}
+      {% for err in form.password.errors %}<small class="error">{{ err }}</small>{% endfor %}
+    </label>
+    <label class="field">
+      <span>{{ form.confirm.label.text }}</span>
+      {{ form.confirm(class="input", autocomplete="new-password") }}
+      {% for err in form.confirm.errors %}<small class="error">{{ err }}</small>{% endfor %}
+    </label>
+    <button class="btn btn-primary" type="submit">ანგარიშის შექმნა</button>
+    <p class="muted" style="margin:16px 0 0">
+      უკვე გაქვთ ანგარიში? <a href="{{ url_for('login') }}">შესვლა</a>
+    </p>
+  </form>
+</div>
+{% endblock %}

@@ -19,15 +19,18 @@
   </div>
   <div class="verdict-actions">
     <form method="post" action="{{ url_for('start_exam', exam_id=exam.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn">თავიდან გადაბარება</button>
     </form>
     {% if pending %}
     <form method="post" action="{{ url_for('new_review') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn">შეცდომების გამოცდა ({{ pending }})</button>
     </form>
     {% endif %}
     {% if next_exam %}
     <form method="post" action="{{ url_for('start_exam', exam_id=next_exam.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn btn-primary">შემდეგი გამოცდა #{{ next_exam.number }}</button>
     </form>
     {% endif %}

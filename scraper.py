@@ -467,22 +467,21 @@ def parse_cache(category: int, category_label: str, with_images: bool) -> None:
         sys.exit("html_cache/ is empty - run `python scraper.py fetch` first")
 
     db.init_db()
-    session = requests.Session()
-    session.headers.update(HEADERS)
+    http = requests.Session()
+    http.headers.update(HEADERS)
     total, missing_key = 0, 0
-    with db.connect() as conn:
+    with db.connect() as session:
         for file in files:
             tickets = parse_html(file.read_text(encoding="utf-8"), category_label)
             for ticket in tickets:
                 image_url = ticket.pop("image_url", None)
-                ticket["image"] = (download_image(image_url, ticket["id"], session)
+                ticket["image"] = (download_image(image_url, ticket["id"], http)
                                    if with_images else None)
                 if ticket["correct_index"] is None:
                     missing_key += 1
-                db.upsert_ticket(conn, ticket)
+                db.upsert_ticket(ticket, session=session)
                 total += 1
             print(f"  {file.name}: {len(tickets)} tickets")
-        conn.commit()
     print(f"\nimported {total} tickets; {missing_key} without a correct answer")
     if missing_key:
         print("run `python scraper.py inspect --page 1` and check the"
@@ -521,43 +520,35 @@ def cmd_inspect(category: int, page: int) -> None:
 
 
 def cmd_check() -> None:
+    from models import Ticket
     db.init_db()
-    with db.connect() as conn:
-        total = conn.execute("SELECT COUNT(*) c FROM tickets").fetchone()["c"]
-        missing = conn.execute(
-            "SELECT id FROM tickets WHERE correct_index IS NULL ORDER BY id"
-        ).fetchall()
-        no_img = conn.execute(
-            "SELECT COUNT(*) c FROM tickets WHERE image IS NULL"
-        ).fetchone()["c"]
+    with db.connect() as session:
+        total = session.query(Ticket).count()
+        missing = [t.id for t in session.query(Ticket).filter(Ticket.correct_index.is_(None)).order_by(Ticket.id)]
+        no_img = session.query(Ticket).filter(Ticket.image.is_(None)).count()
     print(f"tickets: {total}")
     print(f"without correct answer: {len(missing)}")
     print(f"without image: {no_img}")
     if missing:
-        ids = [str(r["id"]) for r in missing[:40]]
-        print("first missing ids:", ", ".join(ids))
+        print("first missing ids:", ", ".join(str(i) for i in missing[:40]))
 
 
 def cmd_answers(path: str) -> None:
     """Import a CSV answer key (ticket_id,correct_index) - 0-based or 1-based."""
+    from models import Ticket
     db.init_db()
     updated = 0
-    with db.connect() as conn, open(path, newline="", encoding="utf-8") as fh:
+    with db.connect() as session, open(path, newline="", encoding="utf-8") as fh:
         for row in csv.reader(fh):
             if len(row) < 2 or not row[0].strip().isdigit():
                 continue
             ticket_id, raw = int(row[0]), int(row[1])
-            count = conn.execute(
-                "SELECT json_array_length(answers_json) n FROM tickets WHERE id = ?",
-                (ticket_id,),
-            ).fetchone()
-            if not count:
+            ticket = session.get(Ticket, ticket_id)
+            if not ticket:
                 continue
-            index = raw - 1 if raw >= count["n"] else raw   # tolerate 1-based keys
-            conn.execute("UPDATE tickets SET correct_index = ? WHERE id = ?",
-                         (index, ticket_id))
+            n = len(ticket.answers)
+            ticket.correct_index = raw - 1 if raw >= n else raw
             updated += 1
-        conn.commit()
     print(f"updated {updated} tickets")
 
 

@@ -14,6 +14,7 @@
   const el = {
     dots: document.getElementById('dots'),
     index: document.getElementById('q-index'),
+    prompt: document.getElementById('q-prompt'),
     ticket: document.getElementById('ticket'),
     explain: document.getElementById('explain'),
     timer: document.getElementById('timer'),
@@ -23,6 +24,14 @@
     answered: document.getElementById('answered-count'),
     errors: document.getElementById('error-count'),
   };
+
+  function csrfHeaders() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const token = meta && meta.getAttribute('content');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['X-CSRFToken'] = token;
+    return headers;
+  }
 
   let current = 0;
   let started = Date.now();
@@ -138,13 +147,6 @@
       tk.appendChild(img);
     }
 
-    const question = document.createElement('div');
-    question.className = 'tk-q';
-    const inner = document.createElement('span');
-    inner.textContent = q.question;
-    question.appendChild(inner);
-    tk.appendChild(question);
-
     const cover = document.createElement('div');
     cover.className = 'tk-cover';
     const slots = q.answers.length <= 2 ? 2 : 4;
@@ -157,6 +159,7 @@
     const q = QUESTIONS[current];
     const locked = mode === 'practice' && revealed.has(current);
     el.index.textContent = 'კითხვა ' + (current + 1) + ' / ' + QUESTIONS.length + ' · ბილეთი #' + q.id;
+    if (el.prompt) el.prompt.textContent = q.question;
 
     el.ticket.innerHTML = '';
     el.ticket.appendChild(buildTicket(q, locked));
@@ -191,7 +194,7 @@
 
     fetch('/api/attempt/' + attemptId + '/answer', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: csrfHeaders(),
       body: JSON.stringify({ ticket_id: q.id, chosen_index: i }),
     }).catch(() => {});
 
@@ -208,7 +211,7 @@
     el.finish.disabled = true;
     fetch('/api/attempt/' + attemptId + '/finish', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: csrfHeaders(),
       body: JSON.stringify({ seconds: Math.round((Date.now() - started) / 1000) }),
     })
       .then((r) => r.json())

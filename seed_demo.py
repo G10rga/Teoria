@@ -1,15 +1,16 @@
 """Fill the DB with 921 synthetic tickets so the UI can be tested without scraping.
 
-    python seed_demo.py          # creates prava.db with demo data + cycle 1
+    python seed_demo.py          # creates prava.db with demo tickets
 
-Replace it later with real data: delete prava.db and run scraper.py scrape.
+Then register in the UI; the first visit generates your personal exam cycle.
+Replace later with real data: delete prava.db and run scraper.py scrape.
 """
 from __future__ import annotations
 
 import random
 
 import db
-import exams
+from models import Attempt, AttemptAnswer, Exam, ExamTicket, FailedQuestion, Ticket, TicketStat
 
 STEMS = [
     "რომელი ავტომობილის მძღოლს წარმოექმნება გზის დათმობის ვალდებულება?",
@@ -33,17 +34,18 @@ EXPLANATION = (
 def main(count: int = 921) -> None:
     rng = random.Random(42)
     db.init_db()
-    with db.connect() as conn:
-        conn.execute("DELETE FROM exam_tickets")
-        conn.execute("DELETE FROM attempt_answers")
-        conn.execute("DELETE FROM attempts")
-        conn.execute("DELETE FROM exams")
-        conn.execute("DELETE FROM ticket_stats")
-        conn.execute("DELETE FROM tickets")
+    with db.connect() as session:
+        session.query(FailedQuestion).delete()
+        session.query(AttemptAnswer).delete()
+        session.query(Attempt).delete()
+        session.query(ExamTicket).delete()
+        session.query(Exam).delete()
+        session.query(TicketStat).delete()
+        session.query(Ticket).delete()
         for i in range(1, count + 1):
             n_answers = rng.choice([2, 3, 3, 4])
             answers = [f"{OPTIONS[j % len(OPTIONS)]} ({j + 1})" for j in range(n_answers)]
-            db.upsert_ticket(conn, {
+            db.upsert_ticket({
                 "id": i,
                 "category": "B",
                 "question": f"{STEMS[i % len(STEMS)]}",
@@ -52,10 +54,8 @@ def main(count: int = 921) -> None:
                 "image": None,
                 "explanation": EXPLANATION,
                 "source_url": f"https://teoria.on.ge/tickets?ticket={i}",
-            })
-        conn.commit()
-        cycle = exams.generate_cycle(conn)
-    print(f"seeded {count} demo tickets, generated cycle {cycle}")
+            }, session=session)
+    print(f"seeded {count} demo tickets — register in the app to generate cycle 1")
 
 
 if __name__ == "__main__":

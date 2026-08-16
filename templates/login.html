@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}შესვლა · პრავა{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <h1>შესვლა</h1>
+  <p class="sub">შედით ანგარიშზე გამოცდებისა და შეცდომების სანახავად.</p>
+  <form method="post" class="card auth-card">
+    {{ form.hidden_tag() }}
+    <label class="field">
+      <span>{{ form.username.label.text }}</span>
+      {{ form.username(class="input", autocomplete="username") }}
+      {% for err in form.username.errors %}<small class="error">{{ err }}</small>{% endfor %}
+    </label>
+    <label class="field">
+      <span>{{ form.password.label.text }}</span>
+      {{ form.password(class="input", autocomplete="current-password") }}
+      {% for err in form.password.errors %}<small class="error">{{ err }}</small>{% endfor %}
+    </label>
+    <button class="btn btn-primary" type="submit">შესვლა</button>
+    <p class="muted" style="margin:16px 0 0">
+      ანგარიში არ გაქვთ? <a href="{{ url_for('register') }}">რეგისტრაცია</a>
+    </p>
+  </form>
+</div>
+{% endblock %}

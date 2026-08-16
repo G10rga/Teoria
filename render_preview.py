@@ -19,7 +19,15 @@ def url_for(endpoint, **values):
     return "#"
 
 
-env.globals.update(url_for=url_for, MAX_ERRORS=3, TIME_LIMIT_MIN=30, QUESTIONS_PER_EXAM=30)
+class Anon:
+    is_authenticated = False
+    username = ""
+
+
+env.globals.update(
+    url_for=url_for, MAX_ERRORS=3, TIME_LIMIT_MIN=30, QUESTIONS_PER_EXAM=30,
+    csrf_token=lambda: "", current_user=Anon(), get_flashed_messages=lambda **_: [],
+)
 env.filters["ka_date"] = lambda v: (v or "").replace("T", " ")[:16] or "-"
 
 QUESTION = (
