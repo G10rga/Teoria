@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ka">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}პრავა · B, B1 ტესტები{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="{{ url_for('dashboard') }}">
+    <span class="brand-mark">P</span>
+    <span>პრავა <span class="muted">/ B, B1</span></span>
+  </a>
+  <nav>
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active == 'dashboard' }}">გამოცდები</a>
+    <a href="{{ url_for('mistakes') }}" class="{{ 'active' if active == 'mistakes' }}">შეცდომები</a>
+    <a href="{{ url_for('bank') }}" class="{{ 'active' if active == 'bank' }}">ბილეთები</a>
+  </nav>
+</header>
+{% block body %}<main class="container">{% block content %}{% endblock %}</main>{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

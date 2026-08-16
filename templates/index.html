@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% set active = 'dashboard' %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>ციკლი {{ cycle }} · {{ cards|length }} გამოცდა</h1>
+    <p class="sub">{{ stats.total }} ბილეთი გადანაწილებულია გამეორების გარეშე — ერთი ბილეთი მხოლოდ ერთ გამოცდაშია.</p>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap">
+    <form method="post" action="{{ url_for('new_review') }}">
+      <button class="btn" {{ 'disabled' if not pending }}>შეცდომების გამოცდა ({{ pending }})</button>
+    </form>
+    <form method="post" action="{{ url_for('new_cycle') }}"
+          onsubmit="return confirm('ახალი ციკლი თავიდან არევს 921 ბილეთს. გავაგრძელოთ?')">
+      <button class="btn btn-ghost">ახალი ციკლი</button>
+    </form>
+  </div>
+</div>
+
+{% if stats.missing_key %}
+<div class="banner">
+  <span>⚠️</span>
+  <div><b>{{ stats.missing_key }} ბილეთს სწორი პასუხი არ აქვს.</b>
+  გაუშვით <code>python scraper.py check</code> და შეასწორეთ პარსერი.</div>
+</div>
+{% endif %}
+
+<section class="hero">
+  {% set circ = 3.1416 * 2 * 68 %}
+  <div class="ring">
+    <svg width="168" height="168" viewBox="0 0 168 168" aria-hidden="true">
+      <circle cx="84" cy="84" r="68" fill="none" stroke="var(--surface2)" stroke-width="14"></circle>
+      <circle cx="84" cy="84" r="68" fill="none" stroke="var(--blue)" stroke-width="14"
+              stroke-linecap="round" stroke-dasharray="{{ circ }}"
+              stroke-dashoffset="{{ circ - circ * stats.coverage_pct / 100 }}"></circle>
+    </svg>
+    <div class="ring-label">
+      <b>{{ stats.coverage_pct }}%</b>
+      <span>გავლილი ბილეთები</span>
+    </div>
+  </div>
+  <div class="metrics">
+    <div class="metric"><b>{{ stats.seen }}</b><span>ნახული / {{ stats.total }}</span></div>
+    <div class="metric is-green"><b>{{ stats.mastered }}</b><span>დაუჭერი</span></div>
+    <div class="metric is-red"><b>{{ stats.pending }}</b><span>შესამოწმებელი</span></div>
+    <div class="metric"><b>{{ stats.passed_attempts }}/{{ stats.attempts }}</b><span>ჩაბარებული გამოცდა</span></div>
+  </div>
+</section>
+
+<h2>გამოცდები</h2>
+<div class="exam-grid">
+  {% for card in cards %}
+  <div class="exam-card {{ card.status }}">
+    <div class="exam-top">
+      <span class="no">#{{ card.number }}</span>
+      {% if card.status == 'passed' %}<span class="chip chip-pass">ჩაბარებული</span>
+      {% elif card.status == 'failed' %}<span class="chip chip-fail">ვერ ჩააბარე</span>
+      {% else %}<span class="chip chip-new">ახალი</span>{% endif %}
+    </div>
+    <div class="score">
+      {{ card.size }} კითხვა{% if card.tries %} · საუკეთესო {{ card.best }}/{{ card.size }}{% endif %}
+    </div>
+    <form method="post" action="{{ url_for('start_exam', exam_id=card.id) }}">
+      <button class="btn {{ 'btn-primary' if card.status == 'new' }} btn-sm">
+        {{ 'დაწყება' if card.status == 'new' else 'თავიდან' }}
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+
+{% if reviews %}
+<h2>შეცდომების გამოცდები</h2>
+<div class="list">
+  {% for r in reviews %}
+  <div class="row">
+    <div class="row-main">
+      <b>გამოცდა #{{ r.id }}</b>
+      <p>{{ r.size }} კითხვა · {{ r.created_at|ka_date }}</p>
+    </div>
+    <div class="row-side">
+      {% if r.tries %}
+        <span class="chip {{ 'chip-pass' if r.ever_passed else 'chip-fail' }}">{{ r.best }}/{{ r.size }}</span>
+      {% endif %}
+      <form method="post" action="{{ url_for('start_exam', exam_id=r.id) }}">
+        <button class="btn btn-sm">გახსნა</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if recent %}
+<h2>ბოლო მცდელობები</h2>
+<div class="list">
+  {% for a in recent %}
+  <a class="row" href="{{ url_for('result', attempt_id=a.id) }}">
+    <div class="row-main">
+      <b>{% if a.kind == 'review' %}შეცდომების გამოცდა{% else %}გამოცდა #{{ a.number }}{% endif %}</b>
+      <p>{{ a.finished_at|ka_date }}</p>
+    </div>
+    <div class="row-side">
+      <span class="chip {{ 'chip-pass' if a.passed else 'chip-fail' }}">
+        {{ a.correct_count }} სწორი · {{ a.wrong_count }} შეცდომა
+      </span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

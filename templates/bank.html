@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% set active = 'bank' %}
+{% block title %}ბილეთები · პრავა{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>ბილეთების ბაზა</h1>
+    <p class="sub">{{ total }} ბილეთი ამ ფილტრით</p>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ query }}" placeholder="ძიება კითხვაში ან ბილეთის ნომერი">
+  <select name="state" class="btn" onchange="this.form.submit()">
+    <option value="all" {{ 'selected' if state == 'all' }}>ყველა</option>
+    <option value="unseen" {{ 'selected' if state == 'unseen' }}>ნახვა არ მიხდენია</option>
+    <option value="wrong" {{ 'selected' if state == 'wrong' }}>შეცდომებით</option>
+    <option value="mastered" {{ 'selected' if state == 'mastered' }}>დაუჭერი</option>
+  </select>
+  <button class="btn">გაფილტრვა</button>
+</form>
+
+<div class="list">
+  {% for t in items %}
+  <div class="row">
+    <div class="row-main">
+      <b>#{{ t.id }}</b>
+      <p>{{ t.question }}</p>
+    </div>
+    <div class="row-side">
+      {% if t.mastered %}<span class="chip chip-pass">დაუჭერა</span>
+      {% elif t.wrong %}<span class="chip chip-fail">{{ t.wrong }}x შეცდომა</span>
+      {% elif t.seen %}<span class="chip">ნახული</span>
+      {% else %}<span class="chip chip-new">ახალი</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="pager">
+  {% if page > 1 %}<a class="btn btn-sm" href="{{ url_for('bank', page=page-1, state=state, q=query) }}">←</a>{% endif %}
+  <span class="muted">{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a class="btn btn-sm" href="{{ url_for('bank', page=page+1, state=state, q=query) }}">→</a>{% endif %}
+</div>
+{% endblock %}
