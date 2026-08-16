@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}შედეგი · პრავა{% endblock %}
+
+{% block content %}
+{% set total = rows|length %}
+<div class="verdict {{ 'pass' if attempt.passed else 'fail' }}">
+  <div>
+    <div class="score-big">{{ attempt.correct_count }}<small> / {{ total }}</small></div>
+    <p class="sub" style="margin-top:6px">
+      {% if exam.kind == 'review' %}შეცდომების გამოცდა{% else %}გამოცდა #{{ exam.number }}{% endif %}
+      · შეცდომა: {{ attempt.wrong_count }} (ზღვარი {{ MAX_ERRORS }})
+      {% if attempt.seconds_spent %} · {{ attempt.seconds_spent // 60 }} წუთი{% endif %}
+    </p>
+  </div>
+  <div>
+    <span class="chip {{ 'chip-pass' if attempt.passed else 'chip-fail' }}">
+      {{ 'ჩაბარებულია' if attempt.passed else 'ვერ ჩააბარე' }}
+    </span>
+  </div>
+  <div class="verdict-actions">
+    <form method="post" action="{{ url_for('start_exam', exam_id=exam.id) }}">
+      <button class="btn">თავიდან გადაბარება</button>
+    </form>
+    {% if pending %}
+    <form method="post" action="{{ url_for('new_review') }}">
+      <button class="btn">შეცდომების გამოცდა ({{ pending }})</button>
+    </form>
+    {% endif %}
+    {% if next_exam %}
+    <form method="post" action="{{ url_for('start_exam', exam_id=next_exam.id) }}">
+      <button class="btn btn-primary">შემდეგი გამოცდა #{{ next_exam.number }}</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<h2 style="margin-top:0">გაანალიზება</h2>
+{% for row in rows %}
+{% set t = row.ticket %}
+<article class="review-item {{ '' if row.is_correct else 'bad' }}">
+  <div class="review-head">
+    <p class="review-q">{{ loop.index }}. {{ t.question }}</p>
+    <span class="chip {{ 'chip-pass' if row.is_correct else 'chip-fail' }}">
+      {{ 'სწორი' if row.is_correct else 'შეცდომა' }}
+    </span>
+  </div>
+  {% if t.image %}<img class="q-image" src="{{ url_for('static', filename=t.image) }}" alt="ბილეთი #{{ t.id }}">{% endif %}
+  {% for answer in t.answers %}
+    {% if loop.index0 == t.correct_index %}
+      <p class="answer-line ok">✓ {{ answer }}</p>
+    {% elif loop.index0 == row.chosen %}
+      <p class="answer-line no">✗ {{ answer }}</p>
+    {% else %}
+      <p class="answer-line muted">· {{ answer }}</p>
+    {% endif %}
+  {% endfor %}
+  {% if row.chosen is none %}<p class="answer-line no">პასუხი არ გაგიცია</p>{% endif %}
+  {% if t.explanation %}
+  <div class="explain"><b>განმარტება:</b> {{ t.explanation }}</div>
+  {% endif %}
+</article>
+{% endfor %}
+{% endblock %}

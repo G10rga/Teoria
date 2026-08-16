@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}გამოცდა · პრავა{% endblock %}
+
+{% block body %}
+<main class="runner" id="runner"
+      data-attempt-id="{{ attempt.id }}"
+      data-mode="{{ attempt.mode }}"
+      data-limit="{{ TIME_LIMIT_MIN }}"
+      data-max-errors="{{ MAX_ERRORS }}">
+
+  <div class="runner-top">
+    <div class="runner-meta">
+      <div>
+        <b>{% if exam.kind == 'review' %}შეცდომების გამოცდა{% else %}გამოცდა #{{ exam.number }}{% endif %}</b>
+        <span class="muted">· პასუხი: <span id="answered-count">0 / {{ count }}</span></span>
+        <span class="muted" id="error-count"></span>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px">
+        <span class="timer" id="timer">30:00</span>
+        <button class="btn btn-primary btn-sm" id="finish">დასრულება</button>
+      </div>
+    </div>
+    <div class="dots" id="dots"></div>
+  </div>
+
+  <article class="q-card">
+    <div class="q-index" id="q-index"></div>
+    <div id="ticket"></div>
+    <div class="explain" id="explain" hidden></div>
+  </article>
+
+  <div class="runner-nav">
+    <button class="btn" id="prev">← წინა</button>
+    <button class="btn" id="next">შემდეგი →</button>
+  </div>
+
+  <p class="muted" style="margin-top:16px; font-size:14px">
+    კლავიშები: 1–4 — პასუხი, ← / → — ნავიგაცია.
+    {{ MAX_ERRORS }}-ზე მეტი შეცდომა = ვერ ჩააბარე.
+  </p>
+
+  <script type="application/json" id="questions-data">{{ questions_json|safe }}</script>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/exam.js') }}"></script>
+{% endblock %}
