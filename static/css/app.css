@@ -304,15 +304,15 @@ a.row:hover { background: var(--soft); }
 .ring-label span { font-size: 11px; max-width: 108px; line-height: 1.3; }
 
 /* ---------------------------------------------------------------- ticket
-   The image fills the ticket; answers sit in a 2x2 grid over the bottom
-   so they hide the empty slots baked into the source pictures. Each cell
-   grows with its text instead of clipping. */
+   The source pictures already have empty answer slots at the bottom. The
+   cover sits over that band only; extra option text grows the card down
+   instead of covering more of the scene. */
 .tk {
   position: relative;
   z-index: 0;
   isolation: isolate;
-  display: grid;
-  grid-template-areas: "stack";
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 940px;
   margin: 0 auto 16px;
@@ -326,8 +326,6 @@ a.row:hover { background: var(--soft); }
 }
 .tk.no-image { aspect-ratio: auto; }
 .tk-img {
-  grid-area: stack;
-  align-self: start;
   display: block;
   width: 100%;
   height: auto;
@@ -335,12 +333,10 @@ a.row:hover { background: var(--soft); }
 }
 
 .tk-cover {
-  grid-area: stack;
-  align-self: end;
-  justify-self: stretch;
   position: relative;
   width: 100%;
   height: auto;
+  margin-top: -7rem;
   min-height: 7rem;
   z-index: 2;
   border: 2px solid #fff;
@@ -350,8 +346,9 @@ a.row:hover { background: var(--soft); }
   background: #093253;
   background-image: linear-gradient(180deg, #0c3c62 0%, #072b47 100%);
 }
-.tk.cutoff-2 .tk-cover { min-height: 11rem; }
-.tk.cutoff-3 .tk-cover { min-height: 15rem; }
+.tk.cutoff-2 .tk-cover { margin-top: -11rem; min-height: 11rem; }
+.tk.cutoff-3 .tk-cover { margin-top: -15rem; min-height: 15rem; }
+.tk.no-image .tk-cover { margin-top: 0; }
 
 .tk-a {
   width: auto;
@@ -413,9 +410,11 @@ a.row:hover { background: var(--soft); }
     display: grid;
     grid-template-columns: 1fr;
     min-height: 0;
+    margin-top: -4.5rem;
     border: 0;
     border-top: 2px solid #fff;
   }
+  .tk.no-image .tk-cover { margin-top: 0; }
   .tk-a, .tk.ans-2 .tk-a.a1, .tk.ans-2 .tk-a.a2, .tk.big-answers .tk-a {
     width: auto;
     min-height: 52px;
