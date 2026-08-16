@@ -36,16 +36,44 @@ Register an account. The first dashboard visit generates that user's cycle of 31
 python app.py          # http://127.0.0.1:5000
 ```
 
-### Deploy
+### Deploy (Ubuntu + PostgreSQL + Cloudflare Tunnel)
 
-Set `SECRET_KEY`. For a hosted Postgres database set `DATABASE_URL`. Then:
+Nginx is not used. Cloudflare Tunnel publishes `teoria.g1orga.dev` to gunicorn on
+**127.0.0.1:8012** (8000/8001 stay free for your other tunnels). PostgreSQL listens on
+localhost only.
+
+On the server:
 
 ```bash
-gunicorn wsgi:app --bind 0.0.0.0:$PORT
+git clone https://github.com/G10rga/Teoria.git /opt/teoria
+cd /opt/teoria
+sudo ./deploy/setup-ubuntu.sh
 ```
 
-A `Procfile` is included for Render / Railway / Heroku-style hosts. After first deploy,
-run `python scraper.py scrape` once (or restore a database dump) so the `tickets` table is filled.
+Then add this hostname to `/etc/cloudflared/config.yml` without removing your
+other rules (see `deploy/cloudflared-ingress.snippet.yml`):
+
+```yaml
+  - hostname: teoria.g1orga.dev
+    service: http://127.0.0.1:8012
+```
+
+```bash
+sudo cloudflared tunnel route dns <TUNNEL_NAME> teoria.g1orga.dev
+sudo systemctl restart cloudflared
+curl -sS http://127.0.0.1:8012/health
+```
+
+Import tickets once (images land in `static/tickets/`):
+
+```bash
+sudo -u teoria bash -lc 'cd /opt/teoria && set -a && . ./.env && set +a && .venv/bin/python scraper.py scrape --pages 47 --delay 1.0'
+```
+
+If 8012 is also taken: `sudo TEORIA_PORT=8013 ./deploy/setup-ubuntu.sh` and point the
+tunnel at that port.
+
+A `Procfile` is still included for Render / Railway / Heroku-style hosts.
 
 Env vars:
 
@@ -53,8 +81,10 @@ Env vars:
 | --- | --- |
 | `SECRET_KEY` | Flask session signing. Required in production. |
 | `DATABASE_URL` | SQLAlchemy URL. Default local file is `teoria.db` (not in git). |
-| `TEORIA_SECURE_COOKIES` | `1` behind HTTPS so the session cookie is Secure. |
-| `PORT` | `app.run` and Procfile bind port. |
+| `TEORIA_SECURE_COOKIES` | `1` behind HTTPS (Cloudflare) so the session cookie is Secure. |
+| `TEORIA_PORT` | Loopback port for gunicorn. Default `8012`. |
+| `PREFERRED_URL_SCHEME` | `https` when the public URL is HTTPS. |
+| `PORT` | `app.run` and Procfile bind port (local / PaaS). |
 
 An existing local `prava.db` is still opened if `teoria.db` is missing.
 
