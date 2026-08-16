@@ -22,6 +22,7 @@
     next: document.getElementById('next'),
     finish: document.getElementById('finish'),
     answered: document.getElementById('answered-count'),
+    correct: document.getElementById('correct-count'),
     errors: document.getElementById('error-count'),
   };
 
@@ -37,8 +38,6 @@
   let started = Date.now();
   let finished = false;
 
-  const revealed = new Set();   // practice mode: tickets already checked
-
   // answer count -> cover height class, matching the site's own mapping
   const CUTOFF_BY_COUNT = { 2: 'cutoff-1', 3: 'cutoff-2', 4: 'cutoff-3' };
 
@@ -48,6 +47,11 @@
   function errorCount() {
     return QUESTIONS.filter(
       (q) => q.chosen !== null && q.chosen !== undefined && q.correct !== null && q.chosen !== q.correct
+    ).length;
+  }
+  function correctCount() {
+    return QUESTIONS.filter(
+      (q) => q.chosen !== null && q.chosen !== undefined && q.correct !== null && q.chosen === q.correct
     ).length;
   }
 
@@ -70,15 +74,17 @@
       b.className = 'dot';
       const answered = q.chosen !== null && q.chosen !== undefined;
       if (answered) b.classList.add('answered');
-      if (mode === 'practice' && revealed.has(i) && answered) {
+      if (answered && q.correct !== null && q.correct !== undefined) {
         b.classList.add(q.chosen === q.correct ? 'correct' : 'wrong');
       }
       if (i === current) b.classList.add('current');
     });
     el.answered.textContent = answeredCount() + ' / ' + QUESTIONS.length;
+    if (el.correct) el.correct.textContent = 'სწორი: ' + correctCount();
     if (el.errors) {
-      const errs = mode === 'practice' ? errorCount() : null;
-      el.errors.textContent = errs === null ? '' : 'შეცდომა: ' + errs + ' / ' + maxErrors;
+      const errs = errorCount();
+      el.errors.textContent = 'შეცდომა: ' + errs + ' / ' + maxErrors;
+      el.errors.classList.toggle('over', errs > maxErrors);
     }
   }
 
@@ -157,14 +163,14 @@
 
   function render() {
     const q = QUESTIONS[current];
-    const locked = mode === 'practice' && revealed.has(current);
+    const locked = q.chosen !== null && q.chosen !== undefined;
     el.index.textContent = 'კითხვა ' + (current + 1) + ' / ' + QUESTIONS.length + ' · ბილეთი #' + q.id;
     if (el.prompt) el.prompt.textContent = q.question;
 
     el.ticket.innerHTML = '';
     el.ticket.appendChild(buildTicket(q, locked));
 
-    const showExplain = locked && q.explanation;
+    const showExplain = mode === 'practice' && locked && q.explanation;
     el.explain.hidden = !showExplain;
     if (showExplain) {
       el.explain.innerHTML = '';
@@ -187,9 +193,8 @@
 
   function choose(i) {
     const q = QUESTIONS[current];
-    if (mode === 'practice' && revealed.has(current)) return;
+    if (q.chosen !== null && q.chosen !== undefined) return;
     q.chosen = i;
-    if (mode === 'practice') revealed.add(current);
     render();
 
     fetch('/api/attempt/' + attemptId + '/answer', {
@@ -197,10 +202,6 @@
       headers: csrfHeaders(),
       body: JSON.stringify({ ticket_id: q.id, chosen_index: i }),
     }).catch(() => {});
-
-    if (mode === 'exam' && current < QUESTIONS.length - 1) {
-      setTimeout(() => go(current + 1), 180);
-    }
   }
 
   function finish(auto) {

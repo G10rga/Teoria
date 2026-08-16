@@ -7,8 +7,11 @@ __pycache__/
 *.db
 *.db-wal
 *.db-shm
+html_cache/
 preview_*.html
 inspect_block.html
+keydump.txt
+keyblock.html
 .pytest_cache/
 .coverage
 htmlcov/
