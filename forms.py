@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from flask_wtf import FlaskForm
-from wtforms import PasswordField, StringField
+from wtforms import PasswordField, SelectField, StringField, TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 
 from models import User
@@ -58,3 +58,28 @@ class LoginForm(FlaskForm):
     password = PasswordField("პაროლი", validators=[
         DataRequired(message="შეიყვანეთ პაროლი."),
     ])
+
+
+class TicketEditForm(FlaskForm):
+    question = TextAreaField("კითხვა", validators=[
+        DataRequired(message="შეიყვანეთ კითხვა."),
+        Length(max=4000),
+    ])
+    answer_1 = TextAreaField("პასუხი 1")
+    answer_2 = TextAreaField("პასუხი 2")
+    answer_3 = TextAreaField("პასუხი 3")
+    answer_4 = TextAreaField("პასუხი 4")
+    correct_index = SelectField(
+        "სწორი პასუხი",
+        choices=[("", "—"), ("0", "1"), ("1", "2"), ("2", "3"), ("3", "4")],
+    )
+    explanation = TextAreaField("განმარტება")
+    image = StringField("სურათის გზა")
+
+    def answers_list(self) -> list[str]:
+        out = []
+        for field in (self.answer_1, self.answer_2, self.answer_3, self.answer_4):
+            text = (field.data or "").strip()
+            if text:
+                out.append(text)
+        return out

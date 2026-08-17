@@ -57,3 +57,8 @@ class Config:
     PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") or (
         "https" if SESSION_COOKIE_SECURE else "http"
     )
+    ADMIN_USERNAMES = frozenset(
+        name.strip().lower()
+        for name in os.environ.get("TEORIA_ADMINS", "").split(",")
+        if name.strip()
+    )

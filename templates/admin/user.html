@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% set active = 'admin' %}
+{% block title %}{{ user.username }} · ადმინი{% endblock %}
+
+{% block content %}
+<p class="sub" style="margin-bottom:12px"><a href="{{ url_for('admin.home') }}">← მომხმარებლები</a></p>
+<div class="page-head">
+  <div>
+    <h1>{{ user.username }}</h1>
+    <p class="sub">{{ user.email }} · რეგისტრაცია {{ user.created_at|ka_date }} · ბოლო შესვლა {{ user.last_login_at|ka_date }}</p>
+  </div>
+</div>
+
+{% include "admin/_nav.html" %}
+
+<section class="hero">
+  <div class="metrics">
+    <div class="metric"><b>{{ stats.seen }} / {{ stats.total }}</b><span>ნანახი ბილეთი</span></div>
+    <div class="metric is-green"><b>{{ stats.mastered }}</b><span>გაგებული</span></div>
+    <div class="metric is-red"><b>{{ pending }}</b><span>შესამოწმებელი</span></div>
+    <div class="metric"><b>{{ stats.passed_attempts }} / {{ stats.attempts }}</b><span>ჩაბარებული გამოცდა</span></div>
+    <div class="metric"><b>{{ cycle or '—' }}</b><span>გადანაწილება</span></div>
+  </div>
+</section>
+
+<h2>გამოცდები</h2>
+{% if not cards %}
+<div class="card"><b>ციკლი ჯერ არ აქვს.</b></div>
+{% else %}
+<table class="admin-table">
+  <thead>
+    <tr><th>#</th><th>ბილეთები</th><th>ცდები</th><th>სტატუსი</th></tr>
+  </thead>
+  <tbody>
+    {% for c in cards %}
+    <tr>
+      <td>{{ c.number }}</td>
+      <td>{{ c.size }}</td>
+      <td>{{ c.tries }}{% if c.best is not none %} · საუკეთესო {{ c.best }}{% endif %}</td>
+      <td>
+        {% if c.status == 'passed' %}<span class="chip chip-pass">ჩაბარებული</span>
+        {% elif c.status == 'failed' %}<span class="chip chip-fail">ჩაჭრილი</span>
+        {% else %}<span class="chip">ახალი</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<h2>ბოლო მცდელობები</h2>
+{% if not attempts %}
+<div class="card"><b>ჯერ არ დაუსრულებია გამოცდა.</b></div>
+{% else %}
+<div class="list">
+  {% for a in attempts %}
+  <a class="row" href="{{ url_for('result', attempt_id=a.id) }}">
+    <div class="row-main">
+      <b>{% if a.kind == 'review' %}შეცდომების გამოცდა{% else %}გამოცდა #{{ a.number }}{% endif %}</b>
+      <p>{{ a.finished_at|ka_date }} · {{ a.mode }}</p>
+    </div>
+    <div class="row-side">
+      <span class="chip {{ 'chip-pass' if a.passed else 'chip-fail' }}">
+        {{ a.correct_count }} სწორი · {{ a.wrong_count }} შეცდომა
+      </span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<h2>შეცდომები</h2>
+{% if not mistakes %}
+<div class="card"><b>ღია შეცდომა არ აქვს.</b></div>
+{% else %}
+<div class="list">
+  {% for t in mistakes %}
+  <a class="row" href="{{ url_for('admin.edit_ticket', ticket_id=t.id) }}">
+    <div class="row-main">
+      <b>#{{ t.id }}</b>
+      <p>{{ t.question }}</p>
+    </div>
+    <div class="row-side">
+      <span class="chip chip-fail">{{ t.wrong }}x</span>
+      {% if t.mastered %}<span class="chip chip-pass">გაგებული</span>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

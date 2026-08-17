@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}შეცდომა {{ code }} · თეორია{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>{{ code }}</h1>
+  <p class="sub">{{ message }}</p>
+  <p style="margin-top:16px"><a class="btn" href="{{ url_for('dashboard') }}">დაფა</a></p>
+</div>
+{% endblock %}

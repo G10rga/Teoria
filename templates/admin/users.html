@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% set active = 'admin' %}
+{% block title %}ადმინი · თეორია{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>ადმინი</h1>
+    <p class="sub">მომხმარებლები, მათი პროგრესი და ბილეთების რედაქტირება.</p>
+  </div>
+</div>
+
+{% include "admin/_nav.html" %}
+
+<section class="hero">
+  <div class="metrics">
+    <div class="metric"><b>{{ user_count }}</b><span>მომხმარებელი</span></div>
+    <div class="metric"><b>{{ ticket_total }}</b><span>ბილეთი</span></div>
+    <div class="metric {{ 'is-red' if missing_key }}"><b>{{ missing_key }}</b><span>გასაღების გარეშე</span></div>
+  </div>
+</section>
+
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ query }}" placeholder="სახელი ან ელფოსტა">
+  <button class="btn">ძიება</button>
+</form>
+
+{% if not rows %}
+<div class="card"><b>მომხმარებელი არ მოიძებნა.</b></div>
+{% else %}
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>სახელი</th>
+      <th>ელფოსტა</th>
+      <th>რეგისტრაცია</th>
+      <th>ბოლო შესვლა</th>
+      <th>გავლილი</th>
+      <th>ჩაბარებული</th>
+      <th>შესამოწმებელი</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>
+        <a href="{{ url_for('admin.user_detail', user_id=row.user.id) }}"><b>{{ row.user.username }}</b></a>
+        {% if row.user.is_admin or row.user.username.lower() in (config.ADMIN_USERNAMES or []) %}<span class="chip chip-new">ადმინი</span>{% endif %}
+      </td>
+      <td>{{ row.user.email }}</td>
+      <td>{{ row.user.created_at|ka_date }}</td>
+      <td>{{ row.user.last_login_at|ka_date }}</td>
+      <td>{{ row.stats.seen }} / {{ row.stats.total }}</td>
+      <td>{{ row.stats.passed_attempts }} / {{ row.stats.attempts }}</td>
+      <td>{% if row.stats.pending %}<span class="chip chip-fail">{{ row.stats.pending }}</span>{% else %}0{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

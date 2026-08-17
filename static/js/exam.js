@@ -1,5 +1,5 @@
 /* Exam runner: one ticket at a time, autosave to the server, 30-min timer.
-   Answers sit under the ticket image so long text does not cover the scene. */
+   Official PNGs include empty slots; those are clipped. Answers sit under the photo. */
 (function () {
   const root = document.getElementById('runner');
   if (!root) return;
@@ -138,6 +138,25 @@
     return node;
   }
 
+  /* Source PNGs include empty numbered slots. Hide that band; HTML answers sit below. */
+  const SLOT_FRACTION = { 'cutoff-1': 0.30, 'cutoff-2': 0.42, 'cutoff-3': 0.52 };
+
+  function clipBakedSlots(img, classes) {
+    const cutoff = classes.find((c) => SLOT_FRACTION[c]) || 'cutoff-2';
+    const frac = SLOT_FRACTION[cutoff];
+    const apply = () => {
+      const stage = img.parentElement;
+      if (!stage || !img.naturalHeight) return;
+      stage.style.height = 'auto';
+      const full = img.getBoundingClientRect().height;
+      if (full > 0) stage.style.height = (full * (1 - frac)) + 'px';
+    };
+    img._clipSlots = apply;
+    const kick = () => requestAnimationFrame(apply);
+    if (img.complete && img.naturalHeight) kick();
+    img.addEventListener('load', kick);
+  }
+
   function buildTicket(q, locked) {
     const tk = document.createElement('div');
     tk.className = ['tk'].concat(layoutClasses(q)).join(' ');
@@ -145,11 +164,14 @@
     if (!locked) tk.classList.add('live');
 
     if (q.image) {
+      const stage = document.createElement('div');
+      stage.className = 'tk-stage';
       const img = document.createElement('img');
       img.className = 'tk-img';
       img.src = q.image;
       img.alt = 'ბილეთი #' + q.id;
-      tk.appendChild(img);
+      stage.appendChild(img);
+      tk.appendChild(stage);
     }
 
     const cover = document.createElement('div');
@@ -168,6 +190,8 @@
 
     el.ticket.innerHTML = '';
     el.ticket.appendChild(buildTicket(q, locked));
+    const img = el.ticket.querySelector('.tk-img');
+    if (img) clipBakedSlots(img, layoutClasses(q));
 
     const showExplain = mode === 'practice' && locked && q.explanation;
     el.explain.hidden = !showExplain;
@@ -240,6 +264,11 @@
     }
     if (e.key === 'ArrowLeft') go(current - 1);
     if (e.key === 'ArrowRight') go(current + 1);
+  });
+
+  window.addEventListener('resize', () => {
+    const img = el.ticket.querySelector('.tk-img');
+    if (img && img._clipSlots) img._clipSlots();
   });
 
   buildDots();

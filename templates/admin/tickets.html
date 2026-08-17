@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% set active = 'admin' %}
+{% block title %}ბილეთები · ადმინი{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>ბილეთების რედაქტირება</h1>
+    <p class="sub">{{ total }} ბილეთი ამ ფილტრით. ცვლილება ყველა მომხმარებელზე იმოქმედებს.</p>
+  </div>
+</div>
+
+{% include "admin/_nav.html" %}
+
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ query }}" placeholder="ნომერი ან კითხვა">
+  <select name="state" class="btn" onchange="this.form.submit()">
+    <option value="all" {{ 'selected' if state == 'all' }}>ყველა</option>
+    <option value="missing" {{ 'selected' if state == 'missing' }}>გასაღების გარეშე</option>
+  </select>
+  <button class="btn">გაფილტრვა</button>
+</form>
+
+{% if not items %}
+<div class="card"><b>ბილეთი არ მოიძებნა.</b></div>
+{% else %}
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>კითხვა</th>
+      <th>პასუხები</th>
+      <th>სწორი</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in items %}
+    <tr>
+      <td><a href="{{ url_for('admin.edit_ticket', ticket_id=t.id) }}"><b>{{ t.id }}</b></a></td>
+      <td><a href="{{ url_for('admin.edit_ticket', ticket_id=t.id) }}">{{ t.question[:140] }}{% if t.question|length > 140 %}…{% endif %}</a></td>
+      <td>{{ t.answers|length }}</td>
+      <td>
+        {% if t.correct_index is none %}<span class="chip chip-warn">არა</span>
+        {% else %}{{ t.correct_index + 1 }}{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<div class="pager">
+  {% if page > 1 %}<a class="btn btn-sm" href="{{ url_for('admin.tickets', page=page-1, state=state, q=query) }}">←</a>{% endif %}
+  <span class="muted">{{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a class="btn btn-sm" href="{{ url_for('admin.tickets', page=page+1, state=state, q=query) }}">→</a>{% endif %}
+</div>
+{% endblock %}

@@ -53,6 +53,7 @@ def init_schema() -> None:
     db.create_all()
     _migrate_legacy_sqlite()
     _ensure_ticket_layout_column()
+    _ensure_user_admin_column()
 
 
 def init_db() -> None:
@@ -189,6 +190,14 @@ def _ensure_ticket_layout_column() -> None:
     cols = _table_columns("tickets")
     if cols and "layout" not in cols:
         db.session.execute(text("ALTER TABLE tickets ADD COLUMN layout VARCHAR(255)"))
+        db.session.commit()
+
+
+def _ensure_user_admin_column() -> None:
+    cols = _table_columns("users")
+    if cols and "is_admin" not in cols:
+        db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+        db.session.execute(text("UPDATE users SET is_admin = FALSE WHERE is_admin IS NULL"))
         db.session.commit()
 
 
