@@ -19,6 +19,9 @@
     <a href="{{ url_for('mistakes') }}" class="{{ 'active' if active == 'mistakes' }}">შეცდომები</a>
     <a href="{{ url_for('history') }}" class="{{ 'active' if active == 'history' }}">ისტორია</a>
     <a href="{{ url_for('bank') }}" class="{{ 'active' if active == 'bank' }}">ბილეთები</a>
+    {% if user_is_admin %}
+    <a href="{{ url_for('admin.home') }}" class="{{ 'active' if active == 'admin' }}">ადმინი</a>
+    {% endif %}
     <span class="nav-user muted">{{ current_user.username }}</span>
     <form method="post" action="{{ url_for('logout') }}" class="nav-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

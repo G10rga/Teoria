@@ -23,6 +23,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     last_login_at = db.Column(db.DateTime(timezone=True))
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
 
     exams = db.relationship("Exam", back_populates="user", cascade="all, delete-orphan", lazy="dynamic")
     attempts = db.relationship("Attempt", back_populates="user", cascade="all, delete-orphan", lazy="dynamic")

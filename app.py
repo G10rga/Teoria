@@ -47,6 +47,21 @@ def create_app(config_object=Config) -> Flask:
         TIME_LIMIT_MIN=exams.TIME_LIMIT_MIN,
         QUESTIONS_PER_EXAM=exams.QUESTIONS_PER_EXAM,
     )
+
+    import admin as admin_mod
+    app.register_blueprint(admin_mod.bp)
+
+    @app.context_processor
+    def _admin_flag():
+        return {"user_is_admin": admin_mod.current_user_is_admin()}
+
+    @app.errorhandler(403)
+    def _forbidden(_err):
+        return render_template(
+            "error.html", code=403,
+            message="ამ გვერდზე შესვლა არ გაქვთ.",
+        ), 403
+
     register_routes(app)
     return app
 
@@ -220,17 +235,25 @@ def register_routes(app: Flask) -> None:
     @app.get("/result/<int:attempt_id>")
     @login_required
     def result(attempt_id: int):
-        attempt = _owned_attempt(attempt_id)
+        attempt = db.session.get(Attempt, attempt_id)
+        if attempt is None:
+            abort(404)
+        from admin import current_user_is_admin
+        if attempt.user_id != current_user.id and not current_user_is_admin():
+            abort(404)
+        viewing_other = attempt.user_id != current_user.id
         if attempt.finished_at is None:
+            if viewing_other:
+                abort(404)
             exams.finish_attempt(attempt_id)
             db.session.refresh(attempt)
         exam = db.session.get(Exam, attempt.exam_id)
         ticket_ids = exams.exam_ticket_ids(attempt.exam_id)
         tickets = db_utils.load_tickets(ticket_ids)
         answers = {a.ticket_id: a for a in attempt.answers}
-        pending = len(exams.mistake_pool(current_user.id))
+        pending = 0 if viewing_other else len(exams.mistake_pool(current_user.id))
         next_exam = None
-        if exam and exam.kind == "base" and exam.number:
+        if not viewing_other and exam and exam.kind == "base" and exam.number:
             next_exam = (
                 Exam.query.filter(
                     Exam.user_id == current_user.id,
@@ -248,7 +271,8 @@ def register_routes(app: Flask) -> None:
             for t in tickets
         ]
         return render_template("result.html", attempt=attempt, exam=exam, rows=rows,
-                               pending=pending, next_exam=next_exam)
+                               pending=pending, next_exam=next_exam,
+                               viewing_other=viewing_other)
 
     @app.get("/mistakes")
     @login_required

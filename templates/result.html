@@ -17,6 +17,7 @@
       {{ 'ჩაბარებულია' if attempt.passed else 'ვერ ჩააბარე' }}
     </span>
   </div>
+  {% if not viewing_other|default(false) %}
   <div class="verdict-actions">
     <form method="post" action="{{ url_for('start_exam', exam_id=exam.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -35,6 +36,7 @@
     </form>
     {% endif %}
   </div>
+  {% endif %}
 </div>
 
 <h2 style="margin-top:0">გაანალიზება</h2>

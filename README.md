@@ -86,6 +86,7 @@ Env vars:
 | `TEORIA_SECURE_COOKIES` | `1` behind HTTPS (Cloudflare) so the session cookie is Secure. |
 | `TEORIA_PORT` | Loopback port for gunicorn. Default `8012`. |
 | `PREFERRED_URL_SCHEME` | `https` when the public URL is HTTPS. |
+| `TEORIA_ADMINS` | Comma-separated usernames that can open `/admin` (users, their progress, ticket edits). |
 | `PORT` | `app.run` and Procfile bind port (local / PaaS). |
 
 An existing local `prava.db` is still opened if `teoria.db` is missing.
@@ -98,6 +99,7 @@ An existing local `prava.db` is still opened if `teoria.db` is missing.
 - **შეცდომების გამოცდა** builds a 30-question exam from that user's open mistakes
   (most wrong first). Unseen tickets fill the rest if the pool is short.
 - **ისტორია** lists taken exams, with filters for passed and failed sittings.
+- Admins listed in `TEORIA_ADMINS` get an **ადმინი** link: all accounts, each user's progress, and ticket edits (question, answers, key, explanation).
 
 A ticket is mastered after 1 correct answer if it was never missed, or after 2 consecutive
 correct answers if it was missed before. Mastering a ticket resolves its failed-question rows
@@ -113,7 +115,7 @@ so they drop out of later review exams.
 
 - 30 questions, 30-minute countdown, auto-submit at 0.
 - 5 or fewer mistakes = pass. Unanswered counts as wrong.
-- Question text is in its own box; answers sit below the image and grow with the text.
+- Question text is in its own box; empty slots in the ticket PNG are cropped off and the live answers sit below.
 - Exam mode grades on the server and does not send the answer key to the browser.
   Practice mode still reveals the key so it can highlight immediately.
 - Keyboard: `1`-`4` answer, `←` / `→` navigate.

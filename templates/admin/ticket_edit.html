@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set active = 'admin' %}
+{% block title %}ბილეთი #{{ ticket.id }} · ადმინი{% endblock %}
+
+{% block content %}
+<p class="sub" style="margin-bottom:12px"><a href="{{ url_for('admin.tickets') }}">← ბილეთები</a></p>
+<div class="page-head">
+  <div>
+    <h1>ბილეთი #{{ ticket.id }}</h1>
+    <p class="sub">{% if ticket.source_url %}<a href="{{ ticket.source_url }}" target="_blank" rel="noopener">წყარო</a>{% else %}რედაქტირება{% endif %}</p>
+  </div>
+</div>
+
+{% include "admin/_nav.html" %}
+
+<form method="post" class="card admin-edit">
+  {{ form.hidden_tag() }}
+  <label class="field">
+    <span>{{ form.question.label.text }}</span>
+    {{ form.question(class="input", rows="4") }}
+    {% for err in form.question.errors %}<small class="error">{{ err }}</small>{% endfor %}
+  </label>
+  {% for field in [form.answer_1, form.answer_2, form.answer_3, form.answer_4] %}
+  <label class="field">
+    <span>{{ field.label.text }}</span>
+    {{ field(class="input", rows="2") }}
+  </label>
+  {% endfor %}
+  <label class="field">
+    <span>{{ form.correct_index.label.text }}</span>
+    {{ form.correct_index(class="input") }}
+  </label>
+  <label class="field">
+    <span>{{ form.explanation.label.text }}</span>
+    {{ form.explanation(class="input", rows="5") }}
+  </label>
+  <label class="field">
+    <span>{{ form.image.label.text }}</span>
+    {{ form.image(class="input") }}
+  </label>
+  {% if ticket.image %}
+  <p class="sub">ამჟამინდელი სურათი</p>
+  <img class="q-image" src="{{ url_for('static', filename=ticket.image) }}" alt="ბილეთი #{{ ticket.id }}">
+  {% endif %}
+  <button class="btn btn-primary" type="submit">შენახვა</button>
+</form>
+{% endblock %}
