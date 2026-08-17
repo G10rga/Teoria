@@ -86,7 +86,7 @@ Env vars:
 | `TEORIA_SECURE_COOKIES` | `1` behind HTTPS (Cloudflare) so the session cookie is Secure. |
 | `TEORIA_PORT` | Loopback port for gunicorn. Default `8012`. |
 | `PREFERRED_URL_SCHEME` | `https` when the public URL is HTTPS. |
-| `TEORIA_ADMINS` | Comma-separated usernames that can open `/admin` (users, their progress, ticket edits). |
+| `TEORIA_ADMINS` | Comma-separated account emails that can open `/admin` (users, their progress, ticket edits). |
 | `PORT` | `app.run` and Procfile bind port (local / PaaS). |
 
 An existing local `prava.db` is still opened if `teoria.db` is missing.
@@ -99,7 +99,7 @@ An existing local `prava.db` is still opened if `teoria.db` is missing.
 - **შეცდომების გამოცდა** builds a 30-question exam from that user's open mistakes
   (most wrong first). Unseen tickets fill the rest if the pool is short.
 - **ისტორია** lists taken exams, with filters for passed and failed sittings.
-- Admins listed in `TEORIA_ADMINS` get an **ადმინი** link: all accounts, each user's progress, and ticket edits (question, answers, key, explanation).
+- Admins listed by email in `TEORIA_ADMINS` get an **ადმინი** link: all accounts, each user's progress, and ticket edits (question, answers, key, explanation).
 
 A ticket is mastered after 1 correct answer if it was never missed, or after 2 consecutive
 correct answers if it was missed before. Mastering a ticket resolves its failed-question rows

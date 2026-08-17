@@ -20,8 +20,8 @@ bp = Blueprint("admin", __name__, url_prefix="/admin")
 def current_user_is_admin() -> bool:
     if not current_user.is_authenticated:
         return False
-    names = current_app.config.get("ADMIN_USERNAMES") or frozenset()
-    if current_user.username.lower() in names:
+    emails = current_app.config.get("ADMIN_EMAILS") or frozenset()
+    if (current_user.email or "").lower() in emails:
         return True
     return bool(getattr(current_user, "is_admin", False))
 
