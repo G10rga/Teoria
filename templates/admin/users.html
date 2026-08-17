@@ -45,7 +45,7 @@
     <tr>
       <td>
         <a href="{{ url_for('admin.user_detail', user_id=row.user.id) }}"><b>{{ row.user.username }}</b></a>
-        {% if row.user.is_admin or row.user.username.lower() in (config.ADMIN_USERNAMES or []) %}<span class="chip chip-new">ადმინი</span>{% endif %}
+        {% if row.user.is_admin or (row.user.email or '')|lower in (config.ADMIN_EMAILS or []) %}<span class="chip chip-new">ადმინი</span>{% endif %}
       </td>
       <td>{{ row.user.email }}</td>
       <td>{{ row.user.created_at|ka_date }}</td>
