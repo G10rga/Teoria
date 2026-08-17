@@ -1,10 +1,12 @@
 # Teoria — B/B1 theory trainer
 
-A Flask app that turns the 921 category-2 (B, B1) tickets from teoria.on.ge into
-**31 exams that partition the whole bank** for each signed-in user: every ticket appears
-in exactly one exam (30 exams x 30 questions + 1 exam x 21 questions). No repeats, no gaps.
-Wrong answers are stored per user and used to build review exams until those tickets
-are mastered.
+**Live site:** [teoria.g1orga.dev](https://teoria.g1orga.dev)
+
+Georgian driving-theory practice for category B / B1. The 921 tickets from teoria.on.ge become **31 exams that cover the whole bank** for each signed-in user: 30 exams × 30 questions plus one exam of 21. Every ticket appears once. No repeats, no gaps.
+
+## Why
+
+Existing sites that generate an exam by drawing tickets at random are not a full pass through the bank. You can sit many exams and still never see half of the 921 tickets, so “just taking exams” is a bad way to study. Teoria shuffles the bank **once per user**, slices it into a complete cycle, and stores misses so review exams keep drilling the tickets you actually got wrong until they are mastered.
 
 SQLite is the default. PostgreSQL is supported in production via `DATABASE_URL`.
 
