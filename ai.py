@@ -59,19 +59,19 @@ def _normalize_explanation(text: str) -> str:
 
 def _looks_incomplete(text: str, wrong_count: int) -> bool:
     stripped = text.strip()
-    if len(stripped) < 120:
+    if len(stripped) < 80:
         return True
     if "რატომ სწორია" not in stripped:
         return True
     if wrong_count and "რატომ არა" not in stripped:
         return True
-    tail = stripped[-1]
-    if tail not in ".!?»\"":
+    last = stripped.split()[-1].lower().rstrip(".,;:!?»\"")
+    if last in {"და", "რომ", "ან", "თუ", "რაც", "ვინ", "როდესაც", "რადგან"}:
         return True
     return False
 
 
-def _call_gemini(prompt: str, api_key: str, *, max_output_tokens: int) -> str:
+def _call_gemini(prompt: str, api_key: str, *, max_output_tokens: int) -> tuple[str, str | None]:
     try:
         resp = requests.post(
             GEMINI_URL,
@@ -84,10 +84,12 @@ def _call_gemini(prompt: str, api_key: str, *, max_output_tokens: int) -> str:
                     "maxOutputTokens": max_output_tokens,
                 },
             },
-            timeout=60,
+            timeout=45,
         )
     except requests.RequestException as exc:
         raise GeminiError(f"Gemini-სთან კავშირი ვერ დამყარდა: {exc}") from exc
+    if resp.status_code == 429:
+        raise GeminiError("Gemini-ის ლიმიტი ამოიწურა (429). დაელოდეთ 1 წუთი და სცადეთ თავიდან.")
     if resp.status_code >= 400:
         detail = _gemini_error_detail(resp)
         raise GeminiError(f"Gemini შეცდომა ({resp.status_code}): {detail}")
@@ -105,11 +107,11 @@ def _call_gemini(prompt: str, api_key: str, *, max_output_tokens: int) -> str:
         finish = candidates[0].get("finishReason")
     except (KeyError, IndexError, TypeError) as exc:
         raise GeminiError("Gemini-მ ცარიელი ან მოულოდნელი პასუხი დააბრუნა.") from exc
-    if finish == "MAX_TOKENS":
+    if finish == "MAX_TOKENS" and len(text) < 80:
         raise GeminiError("AI ახსნა უსრულო დარჩა (ტოკენების ლიმიტი). სცადეთ თავიდან.")
     if not text:
         raise GeminiError("Gemini-მ ცარიელი ტექსტი დააბრუნა.")
-    return text
+    return text, finish
 
 
 def explain_ticket(ticket) -> str:
@@ -163,9 +165,10 @@ def explain_ticket(ticket) -> str:
 """
 
     wrong_count = len(wrong_nums)
-    text = _normalize_explanation(_call_gemini(prompt, api_key, max_output_tokens=1024))
-    if _looks_incomplete(text, wrong_count):
-        text = _normalize_explanation(_call_gemini(prompt, api_key, max_output_tokens=1536))
+    raw, finish = _call_gemini(prompt, api_key, max_output_tokens=1536)
+    text = _normalize_explanation(raw)
+    if finish == "MAX_TOKENS" and not _looks_incomplete(text, wrong_count):
+        return text
     if _looks_incomplete(text, wrong_count):
         raise GeminiError("AI ახსნა უსრულო დარჩა. დააჭირეთ „ახსნის განახლება“.")
     return text

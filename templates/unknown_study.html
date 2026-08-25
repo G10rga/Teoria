@@ -49,13 +49,9 @@
   {% endif %}
   {% if gemini_ready %}
   <button class="btn btn-primary" type="button" id="ai-btn"
-          {{ 'hidden' if ticket.ai_explanation else '' }}>
-    {{ 'ახსენი AI-ით' if not ticket.ai_explanation else '' }}
-  </button>
+          {% if ticket.ai_explanation %}hidden{% endif %}>ახსენი AI-ით</button>
   <button class="btn btn-ghost btn-sm" type="button" id="ai-regen"
-          {{ 'hidden' if not ticket.ai_explanation else '' }}>
-    ახსნის განახლება
-  </button>
+          {% if not ticket.ai_explanation %}hidden{% endif %}>ახსნის განახლება</button>
   {% else %}
   <p class="sub">სერვერზე <code>GEMINI_API_KEY</code> არ არის დაყენებული.</p>
   {% endif %}
@@ -81,6 +77,9 @@
       if (typeof d.message === 'string' && d.message) return d.message;
       if (d.error && typeof d.error === 'object' && d.error.message) return d.error.message;
     }
+    if (res.status === 502) {
+      return 'სერვერი ვერ უპასუხა (502). სცადეთ თავიდან ან დაელოდეთ 1 წუთს.';
+    }
     return 'HTTP ' + res.status;
   }
 
@@ -102,6 +101,7 @@
       active.textContent = 'იტვირთება…';
     }
     err.hidden = true;
+    if (regenerate && text) text.textContent = 'იტვირთება…';
     fetch({{ url_for('unknown_explain', ticket_id=ticket.id)|tojson }}, {
       method: 'POST',
       credentials: 'same-origin',
@@ -125,16 +125,13 @@
         text.textContent = res.d.explanation;
         text.hidden = false;
         if (hint) hint.hidden = true;
-        if (btn) {
-          btn.hidden = true;
-          btn.disabled = false;
-          btn.textContent = 'ახსენი AI-ით';
-        }
+        if (btn) btn.hidden = true;
         if (regen) {
+          regen.hidden = false;
           regen.disabled = false;
           regen.textContent = 'ახსნის განახლება';
         }
-        if (meta) meta.textContent = 'განახლებული AI ახსნა.';
+        if (meta) meta.textContent = regenerate ? 'განახლებული AI ახსნა.' : 'შენახულია ყველა მომხმარებლისთვის.';
       })
       .catch(function (e) {
         err.textContent = e.message || 'შეცდომა';
