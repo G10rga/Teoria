@@ -15,6 +15,7 @@ from datetime import datetime
 from flask import (Flask, abort, flash, jsonify, redirect, render_template,
                    request, url_for)
 from flask_login import current_user, login_required, login_user, logout_user
+from flask_wtf.csrf import CSRFError
 from sqlalchemy import or_
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -59,10 +60,40 @@ def create_app(config_object=Config) -> Flask:
 
     @app.errorhandler(403)
     def _forbidden(_err):
+        if db_utils.wants_json_response():
+            return jsonify({"error": "ამ გვერდზე შესვლა არ გაქვთ."}), 403
         return render_template(
             "error.html", code=403,
             message="ამ გვერდზე შესვლა არ გაქვთ.",
         ), 403
+
+    @app.errorhandler(CSRFError)
+    def _csrf_error(_err):
+        if db_utils.wants_json_response():
+            return jsonify({"error": "CSRF შეცდომა. განაახლეთ გვერდი და სცადეთ თავიდან."}), 400
+        return render_template(
+            "error.html", code=400,
+            message="CSRF შეცდომა. განაახლეთ გვერდი და სცადეთ თავიდან.",
+        ), 400
+
+    @app.errorhandler(404)
+    def _not_found(_err):
+        if db_utils.wants_json_response():
+            return jsonify({"error": "not found"}), 404
+        return render_template(
+            "error.html", code=404,
+            message="გვერდი ვერ მოიძებნა.",
+        ), 404
+
+    @app.errorhandler(500)
+    def _internal_error(err):
+        app.logger.exception("Unhandled error: %s", err)
+        if db_utils.wants_json_response():
+            return jsonify({"error": "სერვერის შეცდომა."}), 500
+        return render_template(
+            "error.html", code=500,
+            message="სერვერის შეცდომა.",
+        ), 500
 
     register_routes(app)
     return app
@@ -325,6 +356,9 @@ def register_routes(app: Flask) -> None:
             text = ai_mod.explain_ticket(ticket)
         except ai_mod.GeminiError as exc:
             return jsonify({"error": str(exc)}), 502
+        except Exception as exc:
+            app.logger.exception("unknown_explain failed for ticket %s", ticket_id)
+            return jsonify({"error": str(exc) or "სერვერის შეცდომა."}), 502
         ticket.ai_explanation = text
         db.session.commit()
         return jsonify({"explanation": text, "cached": False})

@@ -34,10 +34,30 @@ def _sqlite_pragmas(dbapi_connection, _connection_record) -> None:
     cursor.close()
 
 
+def wants_json_response() -> bool:
+    """True for fetch/XHR calls that expect JSON instead of HTML error pages."""
+    from flask import request
+
+    if request.path.startswith("/api/") or request.path.endswith("/explain"):
+        return True
+    if request.headers.get("X-CSRFToken") or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return True
+    best = request.accept_mimetypes.best
+    return best == "application/json"
+
+
 def init_extensions(app) -> None:
     db.init_app(app)
     csrf.init_app(app)
     login_manager.init_app(app)
+
+    @login_manager.unauthorized_handler
+    def _unauthorized():
+        from flask import jsonify, redirect, request, url_for
+
+        if wants_json_response():
+            return jsonify({"error": "გასაგრძელებლად შედით ანგარიშზე."}), 401
+        return redirect(url_for("login", next=request.url))
 
     @login_manager.user_loader
     def load_user(user_id: str):
