@@ -67,20 +67,34 @@
   const hint = document.getElementById('ai-hint');
   const err = document.getElementById('ai-error');
   if (!btn) return;
-  const csrf = document.querySelector('meta[name="csrf-token"]');
+  function csrfHeaders() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const token = meta && meta.getAttribute('content');
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+    if (token) headers['X-CSRFToken'] = token;
+    return headers;
+  }
+
   btn.addEventListener('click', function () {
     btn.disabled = true;
     btn.textContent = 'იტვირთება…';
     err.hidden = true;
     fetch({{ url_for('unknown_explain', ticket_id=ticket.id)|tojson }}, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrf ? csrf.getAttribute('content') : '',
-      },
+      credentials: 'same-origin',
+      headers: csrfHeaders(),
       body: '{}',
     })
-      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (r) {
+        const ct = (r.headers.get('content-type') || '').toLowerCase();
+        if (!ct.includes('application/json')) {
+          throw new Error('სერვერმა JSON-ის ნაცვლად HTML დააბრუნა. განაახლეთ გვერდი ან შეამოწმეთ სერვერის განახლება.');
+        }
+        return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+      })
       .then(function (res) {
         if (!res.ok) throw new Error(res.d.error || 'შეცდომა');
         text.textContent = res.d.explanation;

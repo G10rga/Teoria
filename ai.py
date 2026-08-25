@@ -59,19 +59,22 @@ def explain_ticket(ticket) -> str:
 {official or "(არ არის)"}
 """
 
-    resp = requests.post(
-        GEMINI_URL,
-        params={"key": api_key},
-        headers={"Content-Type": "application/json"},
-        json={
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.4,
-                "maxOutputTokens": 2048,
+    try:
+        resp = requests.post(
+            GEMINI_URL,
+            params={"key": api_key},
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.4,
+                    "maxOutputTokens": 2048,
+                },
             },
-        },
-        timeout=60,
-    )
+            timeout=60,
+        )
+    except requests.RequestException as exc:
+        raise GeminiError(f"Gemini-სთან კავშირი ვერ დამყარდა: {exc}") from exc
     if resp.status_code >= 400:
         detail = resp.text[:300]
         raise GeminiError(f"Gemini შეცდომა ({resp.status_code}): {detail}")
