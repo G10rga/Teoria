@@ -36,8 +36,29 @@ def gemini_configured() -> bool:
     return bool((Config.GEMINI_API_KEY or "").strip())
 
 
+def _normalize_explanation(text: str) -> str:
+    """Drop common filler openings models add despite instructions."""
+    lines = [ln.rstrip() for ln in text.strip().splitlines()]
+    while lines:
+        head = lines[0].strip().lower()
+        if not head:
+            lines.pop(0)
+            continue
+        if head.startswith(("გამარჯობა", "hello", "hi ", "hey ")):
+            lines.pop(0)
+            continue
+        if "მასწავლებელი" in head and head.startswith(("მე ", "შენ ", "გამ")):
+            lines.pop(0)
+            continue
+        if head.startswith(("მოდით", "დღეს ", "ეს კითხვა")):
+            lines.pop(0)
+            continue
+        break
+    return "\n".join(lines).strip()
+
+
 def explain_ticket(ticket) -> str:
-    """Return a Georgian step-by-step explanation for why the correct option is right."""
+    """Return a short Georgian explanation for why the correct option is right."""
     api_key = (Config.GEMINI_API_KEY or "").strip()
     if not api_key:
         raise GeminiError("GEMINI_API_KEY არ არის დაყენებული.")
@@ -51,15 +72,32 @@ def explain_ticket(ticket) -> str:
     options_block = "\n".join(f"{i + 1}. {text}" for i, text in enumerate(answers)) or "(პასუხები არ არის)"
     official = (ticket.explanation or "").strip()
 
-    prompt = f"""შენ ხარ ქართული საგზაო თეორიის მასწავლებელი (კატეგორია B/B1).
-ახსენი მოკლედ და გასაგებად, რატომ არის სწორი პასუხი სწორი და როგორ მივიდეთ მასამდე.
+    wrong_nums = [
+        str(i + 1) for i in range(len(answers))
+        if correct is None or i != correct
+    ]
+    wrong_hint = ", ".join(wrong_nums) if wrong_nums else "—"
+
+    prompt = f"""მოკლე სასწავლო ახსნა B/B1 ბილეთისთვის. მკითხველი დამწყებია.
+
+დაწერე მხოლოდ ქართულად, ამ ზუსტი სტრუქტურით (სხვა ტექსტი, მისალმება და შესავალი არ დაწერო):
+
+სწორი პასუხი: {correct_label or "უცნობი"}
+
+რატომ სწორია:
+- ...
+- ...
+
+რატომ არა სხვები:
+- ...
 
 წესები:
-- უპასუხე მხოლოდ ქართულად.
-- ნაბიჯ-ნაბიჯ მსჯელობა (1, 2, 3…).
-- თუ მოცემულია ოფიციალური განმარტება, დაეყრდნო მას; ნუ გამოიგონებ კანონის მუხლებს თუ ისინი ტექსტში არ ჩანს.
-- თუ სურათი/დიაგრამა აქვს ბილეთს, ჩათვალე რომ ის ჩანს და ახსენი ვიზუალური ნიშნები ზოგადად.
-- ბოლოს ერთი წინადადებით დაასახელე სწორი ვარიანტი.
+- სულ მაქს. 100 სიტყვა; მოკლე და პირდაპირი.
+- „რატომ სწორია“ — 1–2 მოკლე პუნქტი; „რატომ არა სხვები“ — თითო არასწორი ვარიანტისთვის ერთი მოკლე ხაზი (ვარიანტები: {wrong_hint}).
+- აკრძალულია: „გამარჯობა“, „მე ვარ მასწავლებელი“, კითხვის გამეორება, ზედმეტი კონტექსტი, გრძელი ანალიზი, კანონის მუხლების გამოგონება.
+- მასწავლებლის ტონი არ გამოიყენო — მხოლოდ ფაქტები.
+- თუ სურათი/ნიშანია, მხოლოდ 1 წინადადებით მიუთითე რა უნდა დაინახო.
+- თუ ოფიციალური განმარტება არის — მის მიხედვით, მაგრამ უფრო მარტივად.
 
 ბილეთი #{ticket.id}
 კითხვა: {ticket.question}
@@ -67,9 +105,7 @@ def explain_ticket(ticket) -> str:
 ვარიანტები:
 {options_block}
 
-სწორი პასუხი: {correct_label or "უცნობი"}
-
-ოფიციალური განმარტება (teoria.on.ge):
+ოფიციალური განმარტება:
 {official or "(არ არის)"}
 """
 
@@ -81,8 +117,8 @@ def explain_ticket(ticket) -> str:
             json={
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {
-                    "temperature": 0.4,
-                    "maxOutputTokens": 2048,
+                    "temperature": 0.2,
+                    "maxOutputTokens": 512,
                 },
             },
             timeout=60,
@@ -107,4 +143,4 @@ def explain_ticket(ticket) -> str:
         raise GeminiError("Gemini-მ ცარიელი ან მოულოდნელი პასუხი დააბრუნა.") from exc
     if not text:
         raise GeminiError("Gemini-მ ცარიელი ტექსტი დააბრუნა.")
-    return text
+    return _normalize_explanation(text)

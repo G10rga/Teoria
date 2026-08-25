@@ -348,7 +348,9 @@ def register_routes(app: Flask) -> None:
         ticket = db.session.get(Ticket, ticket_id)
         if ticket is None:
             return jsonify({"error": "not found"}), 404
-        if ticket.ai_explanation:
+        data = request.get_json(silent=True) or {}
+        regenerate = bool(data.get("regenerate"))
+        if ticket.ai_explanation and not regenerate:
             return jsonify({"explanation": ticket.ai_explanation, "cached": True})
         if not ai_mod.gemini_configured():
             return jsonify({"error": "GEMINI_API_KEY არ არის დაყენებული."}), 503
