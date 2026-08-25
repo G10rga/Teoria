@@ -57,58 +57,21 @@ def _normalize_explanation(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def explain_ticket(ticket) -> str:
-    """Return a short Georgian explanation for why the correct option is right."""
-    api_key = (Config.GEMINI_API_KEY or "").strip()
-    if not api_key:
-        raise GeminiError("GEMINI_API_KEY არ არის დაყენებული.")
+def _looks_incomplete(text: str, wrong_count: int) -> bool:
+    stripped = text.strip()
+    if len(stripped) < 120:
+        return True
+    if "რატომ სწორია" not in stripped:
+        return True
+    if wrong_count and "რატომ არა" not in stripped:
+        return True
+    tail = stripped[-1]
+    if tail not in ".!?»\"":
+        return True
+    return False
 
-    answers = ticket.answers if hasattr(ticket, "answers") else []
-    correct = ticket.correct_index
-    correct_label = None
-    if correct is not None and 0 <= correct < len(answers):
-        correct_label = f"{correct + 1}. {answers[correct]}"
 
-    options_block = "\n".join(f"{i + 1}. {text}" for i, text in enumerate(answers)) or "(პასუხები არ არის)"
-    official = (ticket.explanation or "").strip()
-
-    wrong_nums = [
-        str(i + 1) for i in range(len(answers))
-        if correct is None or i != correct
-    ]
-    wrong_hint = ", ".join(wrong_nums) if wrong_nums else "—"
-
-    prompt = f"""მოკლე სასწავლო ახსნა B/B1 ბილეთისთვის. მკითხველი დამწყებია.
-
-დაწერე მხოლოდ ქართულად, ამ ზუსტი სტრუქტურით (სხვა ტექსტი, მისალმება და შესავალი არ დაწერო):
-
-სწორი პასუხი: {correct_label or "უცნობი"}
-
-რატომ სწორია:
-- ...
-- ...
-
-რატომ არა სხვები:
-- ...
-
-წესები:
-- სულ მაქს. 100 სიტყვა; მოკლე და პირდაპირი.
-- „რატომ სწორია“ — 1–2 მოკლე პუნქტი; „რატომ არა სხვები“ — თითო არასწორი ვარიანტისთვის ერთი მოკლე ხაზი (ვარიანტები: {wrong_hint}).
-- აკრძალულია: „გამარჯობა“, „მე ვარ მასწავლებელი“, კითხვის გამეორება, ზედმეტი კონტექსტი, გრძელი ანალიზი, კანონის მუხლების გამოგონება.
-- მასწავლებლის ტონი არ გამოიყენო — მხოლოდ ფაქტები.
-- თუ სურათი/ნიშანია, მხოლოდ 1 წინადადებით მიუთითე რა უნდა დაინახო.
-- თუ ოფიციალური განმარტება არის — მის მიხედვით, მაგრამ უფრო მარტივად.
-
-ბილეთი #{ticket.id}
-კითხვა: {ticket.question}
-
-ვარიანტები:
-{options_block}
-
-ოფიციალური განმარტება:
-{official or "(არ არის)"}
-"""
-
+def _call_gemini(prompt: str, api_key: str, *, max_output_tokens: int) -> str:
     try:
         resp = requests.post(
             GEMINI_URL,
@@ -117,8 +80,8 @@ def explain_ticket(ticket) -> str:
             json={
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {
-                    "temperature": 0.2,
-                    "maxOutputTokens": 512,
+                    "temperature": 0.25,
+                    "maxOutputTokens": max_output_tokens,
                 },
             },
             timeout=60,
@@ -139,8 +102,70 @@ def explain_ticket(ticket) -> str:
     try:
         parts = candidates[0]["content"]["parts"]
         text = "".join(p.get("text", "") for p in parts).strip()
+        finish = candidates[0].get("finishReason")
     except (KeyError, IndexError, TypeError) as exc:
         raise GeminiError("Gemini-მ ცარიელი ან მოულოდნელი პასუხი დააბრუნა.") from exc
+    if finish == "MAX_TOKENS":
+        raise GeminiError("AI ახსნა უსრულო დარჩა (ტოკენების ლიმიტი). სცადეთ თავიდან.")
     if not text:
         raise GeminiError("Gemini-მ ცარიელი ტექსტი დააბრუნა.")
-    return _normalize_explanation(text)
+    return text
+
+
+def explain_ticket(ticket) -> str:
+    """Return a concise but complete Georgian explanation for the correct option."""
+    api_key = (Config.GEMINI_API_KEY or "").strip()
+    if not api_key:
+        raise GeminiError("GEMINI_API_KEY არ არის დაყენებული.")
+
+    answers = ticket.answers if hasattr(ticket, "answers") else []
+    correct = ticket.correct_index
+    correct_num = str(correct + 1) if correct is not None else "?"
+
+    options_block = "\n".join(f"{i + 1}. {text}" for i, text in enumerate(answers)) or "(პასუხები არ არის)"
+    official = (ticket.explanation or "").strip()
+
+    wrong_nums = [
+        str(i + 1) for i in range(len(answers))
+        if correct is None or i != correct
+    ]
+    wrong_hint = ", ".join(wrong_nums) if wrong_nums else "—"
+
+    prompt = f"""სასწავლო ახსნა B/B1 ბილეთისთვის. მკითხველი დამწყებია — მოკლედ, მაგრამ სრულად.
+
+დაწერე მხოლოდ ქართულად, ამ სტრუქტურით (ყველა ნაწილი დაასრულე, წინადადება ნახევრად არ დატოვო):
+
+სწორი პასუხი: ვარიანტი {correct_num}
+
+რატომ სწორია:
+- (2–3 მოკლე პუნქტი; თითო ერთი ან ორი წინადადება)
+- ...
+- ...
+
+რატომ არა სხვები:
+- (თითო არასწორი ვარიანტისთვის ერთი მოკლე ხაზი: „2: ...“, „3: ...“ — ვარიანტები: {wrong_hint})
+
+წესები:
+- დაახლ. 120–180 სიტყვა: სრული ახსნა, მაგრამ არა გრძელი ესე.
+- აკრძალულია: მისალმება, „მე ვარ მასწავლებელი“, კითხვის გამეორება, კანონის მუხლების გამოგონება, ზედმეტი ისტორია.
+- „სწორი პასუხი“ ხაზზე მხოლოდ ნომერი; ნუ გაიმეორებ მთელ პასუხის ტექსტს.
+- თუ ოფიციალური განმარტება არის — მის მიხედვით, მარტივი ენით.
+- თუ სურათი/ნიშანია — 1 მოკლე წინადადებით.
+
+ბილეთი #{ticket.id}
+კითხვა: {ticket.question}
+
+ვარიანტები:
+{options_block}
+
+ოფიციალური განმარტება:
+{official or "(არ არის)"}
+"""
+
+    wrong_count = len(wrong_nums)
+    text = _normalize_explanation(_call_gemini(prompt, api_key, max_output_tokens=1024))
+    if _looks_incomplete(text, wrong_count):
+        text = _normalize_explanation(_call_gemini(prompt, api_key, max_output_tokens=1536))
+    if _looks_incomplete(text, wrong_count):
+        raise GeminiError("AI ახსნა უსრულო დარჩა. დააჭირეთ „ახსნის განახლება“.")
+    return text
