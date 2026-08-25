@@ -48,6 +48,7 @@ class Ticket(db.Model):
     image = db.Column(db.String(255))
     layout = db.Column(db.String(255))
     explanation = db.Column(db.Text)
+    ai_explanation = db.Column(db.Text)
     source_url = db.Column(db.String(512))
     imported_at = db.Column(db.DateTime(timezone=True))
 
@@ -65,6 +66,7 @@ class Ticket(db.Model):
             "image": self.image,
             "layout": self.layout,
             "explanation": self.explanation,
+            "ai_explanation": self.ai_explanation,
             "source_url": self.source_url,
             "seen": stats.seen if stats else 0,
             "wrong": stats.wrong if stats else 0,

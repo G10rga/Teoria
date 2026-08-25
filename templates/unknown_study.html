@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% set active = 'unknown' %}
+{% block title %}ბილეთი #{{ ticket.id }} · უცნობი{% endblock %}
+
+{% block content %}
+<p class="sub" style="margin-bottom:12px"><a href="{{ url_for('unknown_list') }}">← უცნობი ბილეთები</a></p>
+<div class="page-head">
+  <div>
+    <h1>ბილეთი #{{ ticket.id }}</h1>
+    <p class="sub">სასწავლო რეჟიმი — სწორი პასუხი უკვე ნაჩვენებია.</p>
+  </div>
+</div>
+
+<article class="q-card">
+  <p class="q-prompt">{{ ticket.question }}</p>
+  {% if ticket.image %}
+  <img class="q-image" src="{{ url_for('static', filename=ticket.image) }}" alt="ბილეთი #{{ ticket.id }}">
+  {% endif %}
+  <div class="options">
+    {% for answer in ticket.answers %}
+    <div class="option {{ 'correct' if loop.index0 == ticket.correct_index }}">
+      <span class="key">{{ loop.index }}</span>
+      <span>{{ answer }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</article>
+
+<section class="study-block card">
+  <h2 style="margin-top:0">ოფიციალური განმარტება</h2>
+  {% if ticket.explanation %}
+  <p class="study-text">{{ ticket.explanation }}</p>
+  {% if ticket.source_url %}
+  <p class="sub"><a href="{{ ticket.source_url }}" target="_blank" rel="noopener">წყარო teoria.on.ge-ზე</a></p>
+  {% endif %}
+  {% else %}
+  <p class="sub">ოფიციალური ტექსტი ამ ბილეთზე ბაზაში არ არის. შეგიძლიათ AI ახსნა მოითხოვოთ.</p>
+  {% endif %}
+</section>
+
+<section class="study-block card" id="ai-panel">
+  <h2 style="margin-top:0">AI ახსნა</h2>
+  {% if ticket.ai_explanation %}
+  <p class="study-text" id="ai-text">{{ ticket.ai_explanation }}</p>
+  <p class="sub">შენახულია ყველა მომხმარებლისთვის (ერთხელ გენერირებული).</p>
+  {% else %}
+  <p class="sub" id="ai-hint">ნაბიჯ-ნაბიჯ ახსნა Gemini-ით. ოფიციალურ ტექსტს ეყრდნობა, თუ არის.</p>
+  <p class="study-text" id="ai-text" hidden></p>
+  <button class="btn btn-primary" type="button" id="ai-btn"
+          {{ 'disabled' if not gemini_ready }}>
+    ახსენი AI-ით
+  </button>
+  {% if not gemini_ready %}
+  <p class="sub">სერვერზე <code>GEMINI_API_KEY</code> არ არის დაყენებული.</p>
+  {% endif %}
+  <p class="sub error" id="ai-error" hidden></p>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if not ticket.ai_explanation and gemini_ready %}
+<script>
+(function () {
+  const btn = document.getElementById('ai-btn');
+  const text = document.getElementById('ai-text');
+  const hint = document.getElementById('ai-hint');
+  const err = document.getElementById('ai-error');
+  if (!btn) return;
+  const csrf = document.querySelector('meta[name="csrf-token"]');
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    btn.textContent = 'იტვირთება…';
+    err.hidden = true;
+    fetch({{ url_for('unknown_explain', ticket_id=ticket.id)|tojson }}, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrf ? csrf.getAttribute('content') : '',
+      },
+      body: '{}',
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.d.error || 'შეცდომა');
+        text.textContent = res.d.explanation;
+        text.hidden = false;
+        if (hint) hint.hidden = true;
+        btn.hidden = true;
+      })
+      .catch(function (e) {
+        err.textContent = e.message || 'შეცდომა';
+        err.hidden = false;
+        btn.disabled = false;
+        btn.textContent = 'ახსენი AI-ით';
+      });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

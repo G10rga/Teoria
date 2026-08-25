@@ -87,6 +87,8 @@ Env vars:
 | `TEORIA_PORT` | Loopback port for gunicorn. Default `8012`. |
 | `PREFERRED_URL_SCHEME` | `https` when the public URL is HTTPS. |
 | `TEORIA_ADMINS` | Comma-separated account emails that can open `/admin` (users, their progress, ticket edits). |
+| `GEMINI_API_KEY` | Google Gemini key for AI explanations on truly-unknown tickets. |
+| `GEMINI_MODEL` | Optional model id. Default `gemini-2.0-flash`. |
 | `PORT` | `app.run` and Procfile bind port (local / PaaS). |
 
 An existing local `prava.db` is still opened if `teoria.db` is missing.
@@ -96,8 +98,11 @@ An existing local `prava.db` is still opened if `teoria.db` is missing.
 - Registration / login is required. Each user has their own exam cycles, attempts, and stats.
 - Finished attempts are stored with a pass/fail flag (`passed` when mistakes ≤ 5).
 - Every wrong or blank answer is stored in `failed_questions` and counted on `ticket_stats`.
-- **შეცდომების გამოცდა** builds a 30-question exam from that user's open mistakes
+- **შეცდომების გამოცდა** builds a 30-question exam from mistakes with fewer than 3 wrongs
   (most wrong first). Unseen tickets fill the rest if the pool is short.
+- Tickets missed **3+ times** leave review exams and appear under **უცნობი**: study mode with
+  the official scraped legal text, plus an optional **ახსენი AI-ით** button (Gemini; cached
+  on the ticket for all users).
 - **ისტორია** lists taken exams, with filters for passed and failed sittings.
 - Admins listed by email in `TEORIA_ADMINS` get an **ადმინი** link: all accounts, each user's progress, and ticket edits (question, answers, key, explanation).
 

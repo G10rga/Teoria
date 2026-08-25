@@ -23,7 +23,8 @@ import exams
 from config import Config
 from db import db
 from forms import LoginForm, RegisterForm
-from models import Attempt, Exam, User, utcnow
+from models import Attempt, Exam, Ticket, User, utcnow
+import ai as ai_mod
 
 
 def create_app(config_object=Config) -> Flask:
@@ -46,6 +47,7 @@ def create_app(config_object=Config) -> Flask:
         MAX_ERRORS=exams.MAX_ERRORS,
         TIME_LIMIT_MIN=exams.TIME_LIMIT_MIN,
         QUESTIONS_PER_EXAM=exams.QUESTIONS_PER_EXAM,
+        UNKNOWN_WRONG_THRESHOLD=exams.UNKNOWN_WRONG_THRESHOLD,
     )
 
     import admin as admin_mod
@@ -282,7 +284,50 @@ def register_routes(app: Flask) -> None:
     def mistakes():
         items = exams.list_failed_questions(current_user.id)
         pending = len(exams.mistake_pool(current_user.id))
-        return render_template("mistakes.html", items=items, pending=pending)
+        unknown = len(exams.unknown_pool(current_user.id))
+        return render_template(
+            "mistakes.html", items=items, pending=pending, unknown=unknown,
+        )
+
+    @app.get("/unknown")
+    @login_required
+    def unknown_list():
+        items = exams.list_unknown_tickets(current_user.id)
+        return render_template("unknown.html", items=items)
+
+    @app.get("/unknown/<int:ticket_id>")
+    @login_required
+    def unknown_study(ticket_id: int):
+        if ticket_id not in set(exams.unknown_pool(current_user.id)):
+            abort(404)
+        ticket = db.session.get(Ticket, ticket_id)
+        if ticket is None:
+            abort(404)
+        return render_template(
+            "unknown_study.html",
+            ticket=ticket,
+            gemini_ready=ai_mod.gemini_configured(),
+        )
+
+    @app.post("/unknown/<int:ticket_id>/explain")
+    @login_required
+    def unknown_explain(ticket_id: int):
+        if ticket_id not in set(exams.unknown_pool(current_user.id)):
+            return jsonify({"error": "not found"}), 404
+        ticket = db.session.get(Ticket, ticket_id)
+        if ticket is None:
+            return jsonify({"error": "not found"}), 404
+        if ticket.ai_explanation:
+            return jsonify({"explanation": ticket.ai_explanation, "cached": True})
+        if not ai_mod.gemini_configured():
+            return jsonify({"error": "GEMINI_API_KEY არ არის დაყენებული."}), 503
+        try:
+            text = ai_mod.explain_ticket(ticket)
+        except ai_mod.GeminiError as exc:
+            return jsonify({"error": str(exc)}), 502
+        ticket.ai_explanation = text
+        db.session.commit()
+        return jsonify({"explanation": text, "cached": False})
 
     @app.get("/history")
     @login_required

@@ -17,6 +17,7 @@
     {% if current_user.is_authenticated %}
     <a href="{{ url_for('dashboard') }}" class="{{ 'active' if active == 'dashboard' }}">გამოცდები</a>
     <a href="{{ url_for('mistakes') }}" class="{{ 'active' if active == 'mistakes' }}">შეცდომები</a>
+    <a href="{{ url_for('unknown_list') }}" class="{{ 'active' if active == 'unknown' }}">უცნობი</a>
     <a href="{{ url_for('history') }}" class="{{ 'active' if active == 'history' }}">ისტორია</a>
     <a href="{{ url_for('bank') }}" class="{{ 'active' if active == 'bank' }}">ბილეთები</a>
     {% if user_is_admin %}

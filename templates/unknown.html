@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% set active = 'unknown' %}
+{% block title %}უცნობი ბილეთები · თეორია{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>უცნობი ბილეთები</h1>
+    <p class="sub">ბილეთები, რომლებიც {{ UNKNOWN_WRONG_THRESHOLD }}-ჯერ ან მეტჯერ შეგეშალათ.
+      აქ გამოცდა არ იწერება — იხილეთ ოფიციალური განმარტება და სურვილისამებრ AI ახსნა.</p>
+  </div>
+</div>
+
+{% if not items %}
+<div class="card">
+  <b>უცნობი ბილეთი ჯერ არ გაქვთ.</b>
+  <p class="sub">როცა ერთი ბილეთი {{ UNKNOWN_WRONG_THRESHOLD }}-ჯერ შეგეშლებათ, აქ გადმოვა.</p>
+</div>
+{% else %}
+<div class="list">
+  {% for t in items %}
+  <a class="row" href="{{ url_for('unknown_study', ticket_id=t.id) }}">
+    <div class="row-main">
+      <b>#{{ t.id }}</b>
+      <p>{{ t.question }}</p>
+    </div>
+    <div class="row-side">
+      <span class="chip chip-fail">{{ t.wrong }}x შეცდომა</span>
+      <span class="chip chip-warn">სწავლა</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
