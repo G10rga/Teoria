@@ -32,16 +32,28 @@ def generate_cycle(user_id: int, seed: str | None = None) -> int:
     ticket_ids = [tid for (tid,) in db.session.query(Ticket.id).order_by(Ticket.id).all()]
     if not ticket_ids:
         raise RuntimeError("ბილეთები არ არის ბაზაში — ჯერ გაუშვი scraper.py")
+    if len(ticket_ids) != len(set(ticket_ids)):
+        raise RuntimeError("ბილეთების ბაზაში დუბლიკატი ID-ებია.")
 
     seed = seed or secrets.token_hex(16)
-    Random(seed).shuffle(ticket_ids)
+    shuffled = list(ticket_ids)
+    Random(seed).shuffle(shuffled)
+    if len(shuffled) != len(set(shuffled)):
+        raise RuntimeError("შემთხვევითი განაწილება დუბლიკატს შეიცავს — თავიდან სცადე.")
 
     cycle = current_cycle(user_id) + 1
     chunks = [
-        ticket_ids[i : i + QUESTIONS_PER_EXAM]
-        for i in range(0, len(ticket_ids), QUESTIONS_PER_EXAM)
+        shuffled[i : i + QUESTIONS_PER_EXAM]
+        for i in range(0, len(shuffled), QUESTIONS_PER_EXAM)
     ]
+    assigned: set[int] = set()
     for number, chunk in enumerate(chunks, start=1):
+        overlap = assigned.intersection(chunk)
+        if overlap:
+            raise RuntimeError(f"გადანაწილების შეცდომა: ბილეთი {sorted(overlap)[0]} ორჯერ მოხვდა.")
+        if len(chunk) != len(set(chunk)):
+            raise RuntimeError(f"გამოცდა #{number} შიგნით დუბლიკატი ბილეთებია.")
+        assigned.update(chunk)
         exam = Exam(user_id=user_id, cycle=cycle, number=number, kind="base", seed=seed)
         db.session.add(exam)
         db.session.flush()
@@ -49,8 +61,82 @@ def generate_cycle(user_id: int, seed: str | None = None) -> int:
             ExamTicket(exam_id=exam.id, position=pos, ticket_id=tid)
             for pos, tid in enumerate(chunk, start=1)
         ])
+    if len(assigned) != len(ticket_ids):
+        raise RuntimeError("გადანაწილება ყველა ბილეთს არ ფარავს.")
     db.session.commit()
     return cycle
+
+
+def cycle_ticket_overlap(user_id: int, cycle: int | None = None) -> list[dict]:
+    """Tickets that appear in more than one base exam of this user's cycle (should be empty)."""
+    cycle = cycle or current_cycle(user_id)
+    if not cycle:
+        return []
+    rows = (
+        db.session.query(
+            ExamTicket.ticket_id,
+            func.count(func.distinct(Exam.id)).label("exam_count"),
+        )
+        .join(Exam, Exam.id == ExamTicket.exam_id)
+        .filter(Exam.user_id == user_id, Exam.cycle == cycle, Exam.kind == "base")
+        .group_by(ExamTicket.ticket_id)
+        .having(func.count(func.distinct(Exam.id)) > 1)
+        .order_by(ExamTicket.ticket_id)
+        .all()
+    )
+    out = []
+    for ticket_id, exam_count in rows:
+        numbers = [
+            num for (num,) in (
+                db.session.query(Exam.number)
+                .join(ExamTicket, ExamTicket.exam_id == Exam.id)
+                .filter(
+                    Exam.user_id == user_id,
+                    Exam.cycle == cycle,
+                    Exam.kind == "base",
+                    ExamTicket.ticket_id == ticket_id,
+                )
+                .order_by(Exam.number)
+                .all()
+            )
+            if num is not None
+        ]
+        out.append({
+            "ticket_id": ticket_id,
+            "exam_count": int(exam_count),
+            "exam_numbers": numbers,
+        })
+    return out
+
+
+def cycle_coverage(user_id: int, cycle: int | None = None) -> dict:
+    """How many unique tickets this base cycle covers vs the bank."""
+    cycle = cycle or current_cycle(user_id)
+    total = db.session.query(func.count(Ticket.id)).scalar() or 0
+    if not cycle:
+        return {"cycle": 0, "unique": 0, "slots": 0, "total": total, "overlaps": 0}
+    unique = (
+        db.session.query(func.count(func.distinct(ExamTicket.ticket_id)))
+        .join(Exam, Exam.id == ExamTicket.exam_id)
+        .filter(Exam.user_id == user_id, Exam.cycle == cycle, Exam.kind == "base")
+        .scalar()
+        or 0
+    )
+    slots = (
+        db.session.query(func.count(ExamTicket.ticket_id))
+        .join(Exam, Exam.id == ExamTicket.exam_id)
+        .filter(Exam.user_id == user_id, Exam.cycle == cycle, Exam.kind == "base")
+        .scalar()
+        or 0
+    )
+    overlaps = len(cycle_ticket_overlap(user_id, cycle))
+    return {
+        "cycle": cycle,
+        "unique": int(unique),
+        "slots": int(slots),
+        "total": int(total),
+        "overlaps": overlaps,
+    }
 
 
 def mistake_pool(user_id: int) -> list[int]:
