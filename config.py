@@ -62,4 +62,4 @@ class Config:
         for email in os.environ.get("TEORIA_ADMINS", "").split(",")
         if email.strip()
     )
-    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")

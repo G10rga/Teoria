@@ -87,7 +87,7 @@ Env vars:
 | `TEORIA_PORT` | Loopback port for gunicorn. Default `8012`. |
 | `PREFERRED_URL_SCHEME` | `https` when the public URL is HTTPS. |
 | `TEORIA_ADMINS` | Comma-separated account emails that can open `/admin` (users, their progress, ticket edits). |
-| `GEMINI_API_KEY` | Google Gemini key for AI explanations on truly-unknown tickets. |
+| `GEMINI_API_KEY` | Free or paid key from [Google AI Studio](https://aistudio.google.com/apikey) for AI explanations on truly-unknown tickets. `GOOGLE_API_KEY` also works. |
 | `GEMINI_MODEL` | Optional model id. Default `gemini-2.5-flash`. |
 | `PORT` | `app.run` and Procfile bind port (local / PaaS). |
 
