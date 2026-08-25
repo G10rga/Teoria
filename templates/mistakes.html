@@ -6,7 +6,10 @@
 <div class="page-head">
   <div>
     <h1>შეცდომები</h1>
-    <p class="sub">{{ pending }} ბილეთი ელოდება გამეორებას. ბილეთი „გაგებულად“ ითვლება ზედიზედ ორი სწორი პასუხის შემდეგ.</p>
+    <p class="sub">{{ pending }} ბილეთი ელოდება გამეორებას (1–{{ UNKNOWN_WRONG_THRESHOLD - 1 }} შეცდომა).
+      {{ UNKNOWN_WRONG_THRESHOLD }}-ჯერ ან მეტჯერ შეცდომა გადადის
+      <a href="{{ url_for('unknown_list') }}">უცნობ ბილეთებში</a>{% if unknown %} ({{ unknown }}){% endif %}.
+      ბილეთი „გაგებულად“ ითვლება ზედიზედ ორი სწორი პასუხის შემდეგ.</p>
   </div>
   <form method="post" action="{{ url_for('new_review') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

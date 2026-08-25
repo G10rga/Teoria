@@ -18,6 +18,7 @@ from models import (
 QUESTIONS_PER_EXAM = 30
 MAX_ERRORS = 5
 TIME_LIMIT_MIN = 30
+UNKNOWN_WRONG_THRESHOLD = 3
 
 
 def current_cycle(user_id: int) -> int:
@@ -140,18 +141,50 @@ def cycle_coverage(user_id: int, cycle: int | None = None) -> dict:
 
 
 def mistake_pool(user_id: int) -> list[int]:
-    """Tickets this user answered wrong and has not yet re-learned, hardest first."""
+    """Tickets wrong 1..(threshold-1) times — feeds review exams, not the unknown study tab."""
     rows = (
         db.session.query(TicketStat.ticket_id)
         .filter(
             TicketStat.user_id == user_id,
             TicketStat.wrong > 0,
+            TicketStat.wrong < UNKNOWN_WRONG_THRESHOLD,
             TicketStat.mastered.is_(False),
         )
         .order_by(TicketStat.wrong.desc(), TicketStat.correct_streak.asc(), TicketStat.last_seen.asc())
         .all()
     )
     return [tid for (tid,) in rows]
+
+
+def unknown_pool(user_id: int) -> list[int]:
+    """Tickets wrong enough times to leave exams and enter the study tab."""
+    rows = (
+        db.session.query(TicketStat.ticket_id)
+        .filter(
+            TicketStat.user_id == user_id,
+            TicketStat.wrong >= UNKNOWN_WRONG_THRESHOLD,
+            TicketStat.mastered.is_(False),
+        )
+        .order_by(TicketStat.wrong.desc(), TicketStat.last_seen.asc(), TicketStat.ticket_id)
+        .all()
+    )
+    return [tid for (tid,) in rows]
+
+
+def list_unknown_tickets(user_id: int) -> list[dict]:
+    rows = (
+        db.session.query(Ticket, TicketStat)
+        .join(TicketStat, and_(
+            TicketStat.ticket_id == Ticket.id, TicketStat.user_id == user_id,
+        ))
+        .filter(
+            TicketStat.wrong >= UNKNOWN_WRONG_THRESHOLD,
+            TicketStat.mastered.is_(False),
+        )
+        .order_by(TicketStat.wrong.desc(), Ticket.id)
+        .all()
+    )
+    return [ticket.to_dict(stats) for ticket, stats in rows]
 
 
 def unseen_pool(user_id: int) -> list[int]:
@@ -299,9 +332,26 @@ def overview(user_id: int) -> dict:
         func.coalesce(func.sum(case((TicketStat.seen > 0, 1), else_=0)), 0).label("seen"),
         func.coalesce(func.sum(case((TicketStat.mastered.is_(True), 1), else_=0)), 0).label("mastered"),
         func.coalesce(
-            func.sum(case((and_(TicketStat.wrong > 0, TicketStat.mastered.is_(False)), 1), else_=0)),
+            func.sum(case((
+                and_(
+                    TicketStat.wrong > 0,
+                    TicketStat.wrong < UNKNOWN_WRONG_THRESHOLD,
+                    TicketStat.mastered.is_(False),
+                ),
+                1,
+            ), else_=0)),
             0,
         ).label("pending"),
+        func.coalesce(
+            func.sum(case((
+                and_(
+                    TicketStat.wrong >= UNKNOWN_WRONG_THRESHOLD,
+                    TicketStat.mastered.is_(False),
+                ),
+                1,
+            ), else_=0)),
+            0,
+        ).label("unknown"),
     ).filter(TicketStat.user_id == user_id).one()
 
     attempts = db.session.query(
@@ -313,11 +363,13 @@ def overview(user_id: int) -> dict:
     seen = int(stats.seen)
     mastered = int(stats.mastered)
     pending = int(stats.pending)
+    unknown = int(stats.unknown)
     return {
         "total": total,
         "seen": seen,
         "mastered": mastered,
         "pending": pending,
+        "unknown": unknown,
         "unseen": max(total - seen, 0),
         "attempts": int(attempts[0]),
         "passed_attempts": int(attempts[1]),
@@ -434,8 +486,12 @@ def list_failed_questions(user_id: int) -> list[dict]:
         .join(TicketStat, and_(
             TicketStat.ticket_id == Ticket.id, TicketStat.user_id == user_id,
         ))
-        .filter(TicketStat.wrong > 0)
-        .order_by(TicketStat.mastered.asc(), TicketStat.wrong.desc(), Ticket.id)
+        .filter(
+            TicketStat.wrong > 0,
+            TicketStat.wrong < UNKNOWN_WRONG_THRESHOLD,
+            TicketStat.mastered.is_(False),
+        )
+        .order_by(TicketStat.wrong.desc(), Ticket.id)
         .all()
     )
     return [ticket.to_dict(stats) for ticket, stats in rows]

@@ -119,6 +119,14 @@ h3 { font-size: 18px; margin: 0 0 8px; }
 }
 .field select.input { min-height: 44px; }
 
+.study-block { margin-top: 20px; }
+.study-block h2 { font-size: 18px; margin-bottom: 10px; }
+.study-text {
+  margin: 0; white-space: pre-wrap; line-height: 1.55; font-size: 15px;
+}
+.study-block .btn { margin-top: 12px; }
+.study-block .error { color: var(--red); }
+
 .chip {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 500;
