@@ -88,7 +88,7 @@ Env vars:
 | `PREFERRED_URL_SCHEME` | `https` when the public URL is HTTPS. |
 | `TEORIA_ADMINS` | Comma-separated account emails that can open `/admin` (users, their progress, ticket edits). |
 | `GEMINI_API_KEY` | Google Gemini key for AI explanations on truly-unknown tickets. |
-| `GEMINI_MODEL` | Optional model id. Default `gemini-2.0-flash`. |
+| `GEMINI_MODEL` | Optional model id. Default `gemini-2.5-flash`. |
 | `PORT` | `app.run` and Procfile bind port (local / PaaS). |
 
 An existing local `prava.db` is still opened if `teoria.db` is missing.
