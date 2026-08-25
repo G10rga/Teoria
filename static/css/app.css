@@ -124,6 +124,13 @@ h3 { font-size: 18px; margin: 0 0 8px; }
 .study-text {
   margin: 0; white-space: pre-wrap; line-height: 1.55; font-size: 15px;
 }
+.ai-explanation {
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface2);
+  border-left: 3px solid var(--blue);
+}
 .study-block .btn { margin-top: 12px; }
 .study-block .error { color: var(--red); }
 
