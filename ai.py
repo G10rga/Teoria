@@ -7,11 +7,25 @@ import requests
 
 from config import Config
 
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+# gemini-2.0-flash was shut down 2026-06-01; override with GEMINI_MODEL if needed.
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/"
     f"{GEMINI_MODEL}:generateContent"
 )
+
+
+def _gemini_error_detail(resp: requests.Response) -> str:
+    try:
+        payload = resp.json()
+    except ValueError:
+        return (resp.text or resp.reason or "unknown error")[:300]
+    err = payload.get("error")
+    if isinstance(err, dict):
+        return (err.get("message") or err.get("status") or str(err))[:300]
+    if isinstance(err, str):
+        return err[:300]
+    return (resp.text or resp.reason or "unknown error")[:300]
 
 
 class GeminiError(RuntimeError):
@@ -76,12 +90,18 @@ def explain_ticket(ticket) -> str:
     except requests.RequestException as exc:
         raise GeminiError(f"Gemini-სთან კავშირი ვერ დამყარდა: {exc}") from exc
     if resp.status_code >= 400:
-        detail = resp.text[:300]
+        detail = _gemini_error_detail(resp)
         raise GeminiError(f"Gemini შეცდომა ({resp.status_code}): {detail}")
 
     data = resp.json()
+    candidates = data.get("candidates") or []
+    if not candidates:
+        block = (data.get("promptFeedback") or {}).get("blockReason")
+        if block:
+            raise GeminiError(f"Gemini-მ პასუხი დაბლოკა ({block}).")
+        raise GeminiError("Gemini-მ ცარიელი ან მოულოდნელი პასუხი დააბრუნა.")
     try:
-        parts = data["candidates"][0]["content"]["parts"]
+        parts = candidates[0]["content"]["parts"]
         text = "".join(p.get("text", "") for p in parts).strip()
     except (KeyError, IndexError, TypeError) as exc:
         raise GeminiError("Gemini-მ ცარიელი ან მოულოდნელი პასუხი დააბრუნა.") from exc

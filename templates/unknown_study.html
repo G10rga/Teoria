@@ -67,6 +67,16 @@
   const hint = document.getElementById('ai-hint');
   const err = document.getElementById('ai-error');
   if (!btn) return;
+  function apiError(res) {
+    const d = res.d;
+    if (d && typeof d === 'object') {
+      if (typeof d.error === 'string' && d.error) return d.error;
+      if (typeof d.message === 'string' && d.message) return d.message;
+      if (d.error && typeof d.error === 'object' && d.error.message) return d.error.message;
+    }
+    return 'HTTP ' + res.status;
+  }
+
   function csrfHeaders() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     const token = meta && meta.getAttribute('content');
@@ -93,10 +103,15 @@
         if (!ct.includes('application/json')) {
           throw new Error('სერვერმა JSON-ის ნაცვლად HTML დააბრუნა. განაახლეთ გვერდი ან შეამოწმეთ სერვერის განახლება.');
         }
-        return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+        return r.json()
+          .catch(function () {
+            throw new Error('HTTP ' + r.status + ': პასუხი ვერ გაერკვა.');
+          })
+          .then(function (d) { return { ok: r.ok, status: r.status, d: d }; });
       })
       .then(function (res) {
-        if (!res.ok) throw new Error(res.d.error || 'შეცდომა');
+        if (!res.ok) throw new Error(apiError(res));
+        if (!res.d || !res.d.explanation) throw new Error('AI ახსნა ცარიელია.');
         text.textContent = res.d.explanation;
         text.hidden = false;
         if (hint) hint.hidden = true;
