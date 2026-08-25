@@ -142,9 +142,12 @@ def register_routes(app: Flask) -> None:
         reviews = exams.review_exams(uid)
         pending = len(exams.mistake_pool(uid))
         recent = exams.recent_attempts(uid)
+        coverage = exams.cycle_coverage(uid, cycle) if cycle else None
+        overlaps = exams.cycle_ticket_overlap(uid, cycle) if cycle else []
         return render_template(
             "index.html", stats=stats, cycle=cycle, cards=cards,
             reviews=reviews, pending=pending, recent=recent, error=error,
+            coverage=coverage, overlaps=overlaps,
         )
 
     @app.post("/cycle/new")

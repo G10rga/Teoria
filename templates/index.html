@@ -5,7 +5,10 @@
 <div class="page-head">
   <div>
     <h1>გადანაწილება {{ cycle }} · {{ cards|length }} გამოცდა</h1>
-    <p class="sub">{{ stats.total }} ბილეთი გადანაწილებულია გამეორების გარეშე ანუ ერთი ბილეთი მხოლოდ ერთ გამოცდაშია.</p>
+    <p class="sub">{{ stats.total }} ბილეთი გადანაწილებულია გამეორების გარეშე —
+      ამ ციკლში ერთი ბილეთი მხოლოდ ერთ <b>საბაზისო</b> გამოცდაშია
+      {% if coverage %}({{ coverage.unique }} უნიკალური / {{ coverage.slots }} ადგილი){% endif %}.
+      შეცდომების გამოცდა და თავიდან გადაბარება იგივე ბილეთებს აბრუნებს.</p>
   </div>
   <div style="display:flex; gap:10px; flex-wrap:wrap">
     <form method="post" action="{{ url_for('new_review') }}">
@@ -24,6 +27,21 @@
 <div class="banner">
   <span>⚠️</span>
   <div>{{ error }}</div>
+</div>
+{% endif %}
+
+{% if overlaps %}
+<div class="banner">
+  <span>⚠️</span>
+  <div><b>გადანაწილების შეცდომა:</b> {{ overlaps|length }} ბილეთი ერთზე მეტ საბაზისო გამოცდაშია
+    (მაგ. #{{ overlaps[0].ticket_id }} → გამოცდები {{ overlaps[0].exam_numbers|join(', ') }}).
+    გაუშვით „ახალი გადანაწილება“.</div>
+</div>
+{% elif coverage and coverage.unique != coverage.total and coverage.total %}
+<div class="banner">
+  <span>⚠️</span>
+  <div>ამ ციკლში {{ coverage.unique }} უნიკალური ბილეთია {{ coverage.total }}-დან.
+    სრული დაფარვისთვის გაუშვით „ახალი გადანაწილება“.</div>
 </div>
 {% endif %}
 
