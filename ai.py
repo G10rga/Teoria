@@ -1,8 +1,8 @@
 """AI explanations for truly-unknown tickets (shared cache on Ticket.ai_explanation).
 
 Providers (pick via env):
-  - groq   — GROQ_API_KEY (preferred when set; fast free tier)
-  - gemini — GEMINI_API_KEY / GOOGLE_API_KEY
+  - gemini — GEMINI_API_KEY / GOOGLE_API_KEY (preferred: better Georgian)
+  - groq   — GROQ_API_KEY (fast fallback)
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 # llama-3.3-70b-versatile was shut down 2026-08-16 on free/developer tiers.
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 
-# gemini-2.0-flash was shut down 2026-06-01.
+# gemini-2.0-flash was shut down 2026-06-01. Keep thinkingBudget=0 for speed.
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/"
@@ -33,13 +33,14 @@ GeminiError = AIError
 
 
 def _provider() -> str:
-    explicit = (os.environ.get("AI_PROVIDER") or "").strip().lower()
+    explicit = (Config.AI_PROVIDER or os.environ.get("AI_PROVIDER") or "").strip().lower()
     if explicit in ("groq", "gemini"):
         return explicit
-    if (Config.GROQ_API_KEY or "").strip():
-        return "groq"
+    # Prefer Gemini for Georgian quality when both keys exist.
     if (Config.GEMINI_API_KEY or "").strip():
         return "gemini"
+    if (Config.GROQ_API_KEY or "").strip():
+        return "groq"
     return ""
 
 
@@ -104,6 +105,22 @@ def _looks_incomplete(text: str, wrong_count: int) -> bool:
     return False
 
 
+def _candidate_text(candidate: dict) -> str:
+    """Join visible answer text; skip Gemini thought parts."""
+    content = candidate.get("content") or {}
+    parts = content.get("parts") or []
+    chunks = []
+    for part in parts:
+        if not isinstance(part, dict):
+            continue
+        if part.get("thought"):
+            continue
+        piece = (part.get("text") or "").strip()
+        if piece:
+            chunks.append(piece)
+    return "\n".join(chunks).strip()
+
+
 def _build_prompt(ticket) -> tuple[str, int]:
     answers = ticket.answers if hasattr(ticket, "answers") else []
     correct = ticket.correct_index
@@ -118,7 +135,9 @@ def _build_prompt(ticket) -> tuple[str, int]:
 
     prompt = f"""სასწავლო ახსნა B/B1 ბილეთისთვის. მკითხველი დამწყებია — მოკლედ, მაგრამ სრულად.
 
-დაწერე მხოლოდ ქართულად, ამ სტრუქტურით (ყველა ნაწილი დაასრულე, წინადადება ნახევრად არ დატოვო):
+დაწერე მხოლოდ ქართულად (მხოლოდ ქართული ანბანი), ამ სტრუქტურით.
+ყველა ნაწილი დაასრულე; წინადადება ნახევრად არ დატოვო.
+ინგლისური სიტყვები, ლათინური ასოები და ტრანსლიტერაცია აკრძალულია (მაგ. manoeuvre, priority, bus — არა).
 
 სწორი პასუხი: ვარიანტი {correct_num}
 
@@ -165,7 +184,8 @@ def _call_groq(prompt: str, api_key: str) -> str:
                     {
                         "role": "system",
                         "content": (
-                            "You write short Georgian driving-theory explanations. "
+                            "Write short driving-theory explanations in Georgian only "
+                            "(Mkhedruli script). Never use English words or Latin letters. "
                             "Follow the user's structure exactly. No greetings."
                         ),
                     },
@@ -194,45 +214,47 @@ def _call_groq(prompt: str, api_key: str) -> str:
     return text
 
 
+def _post_gemini(api_key: str, body: dict, *, timeout: int = 35) -> requests.Response:
+    return requests.post(
+        GEMINI_URL,
+        params={"key": api_key},
+        headers={"Content-Type": "application/json"},
+        json=body,
+        timeout=timeout,
+    )
+
+
 def _call_gemini(prompt: str, api_key: str) -> str:
-    # thinkingBudget=0 avoids Gemini 2.5 spending the whole output budget on "thinking"
-    # (which caused empty/truncated answers and slow Cloudflare 502s).
+    # thinkingBudget=0: fast answers, avoid Cloudflare timeouts / empty outputs.
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "temperature": 0.25,
-            "maxOutputTokens": 1024,
+            "temperature": 0.3,
+            "maxOutputTokens": 1200,
             "thinkingConfig": {"thinkingBudget": 0},
         },
     }
     try:
-        resp = requests.post(
-            GEMINI_URL,
-            params={"key": api_key},
-            headers={"Content-Type": "application/json"},
-            json=body,
-            timeout=25,
-        )
+        resp = _post_gemini(api_key, body)
     except requests.RequestException as exc:
         raise AIError(f"Gemini-სთან კავშირი ვერ დამყარდა: {exc}") from exc
+
     if resp.status_code == 429:
         raise AIError("Gemini-ის ლიმიტი ამოიწურა (429). დაელოდეთ 1 წუთი და სცადეთ თავიდან.")
+
     if resp.status_code >= 400:
-        # Retry once without thinkingConfig (older models reject unknown fields).
+        # Older/newer models may reject thinkingConfig — retry without it.
+        detail = _api_error_detail(resp)
         if resp.status_code == 400 and "thinking" in (resp.text or "").lower():
             body["generationConfig"].pop("thinkingConfig", None)
             try:
-                resp = requests.post(
-                    GEMINI_URL,
-                    params={"key": api_key},
-                    headers={"Content-Type": "application/json"},
-                    json=body,
-                    timeout=25,
-                )
+                resp = _post_gemini(api_key, body)
             except requests.RequestException as exc:
                 raise AIError(f"Gemini-სთან კავშირი ვერ დამყარდა: {exc}") from exc
-        if resp.status_code >= 400:
-            raise AIError(f"Gemini შეცდომა ({resp.status_code}): {_api_error_detail(resp)}")
+            if resp.status_code >= 400:
+                raise AIError(f"Gemini შეცდომა ({resp.status_code}): {_api_error_detail(resp)}")
+        else:
+            raise AIError(f"Gemini შეცდომა ({resp.status_code}): {detail}")
 
     data = resp.json()
     candidates = data.get("candidates") or []
@@ -241,12 +263,10 @@ def _call_gemini(prompt: str, api_key: str) -> str:
         if block:
             raise AIError(f"Gemini-მ პასუხი დაბლოკა ({block}).")
         raise AIError("Gemini-მ ცარიელი ან მოულოდნელი პასუხი დააბრუნა.")
-    try:
-        parts = candidates[0]["content"]["parts"]
-        text = "".join(p.get("text", "") for p in parts).strip()
-        finish = candidates[0].get("finishReason")
-    except (KeyError, IndexError, TypeError) as exc:
-        raise AIError("Gemini-მ ცარიელი ან მოულოდნელი პასუხი დააბრუნა.") from exc
+
+    candidate = candidates[0]
+    text = _candidate_text(candidate)
+    finish = candidate.get("finishReason")
     if finish == "MAX_TOKENS" and len(text) < 80:
         raise AIError("AI ახსნა უსრულო დარჩა (ტოკენების ლიმიტი). სცადეთ თავიდან.")
     if not text:
@@ -258,7 +278,7 @@ def explain_ticket(ticket) -> str:
     """Return a concise but complete Georgian explanation for the correct option."""
     provider = _provider()
     if not provider:
-        raise AIError("AI API გასაღები არ არის დაყენებული (GROQ_API_KEY ან GEMINI_API_KEY).")
+        raise AIError("AI API გასაღები არ არის დაყენებული (GEMINI_API_KEY ან GROQ_API_KEY).")
 
     prompt, wrong_count = _build_prompt(ticket)
     if provider == "groq":
