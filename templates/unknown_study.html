@@ -44,7 +44,7 @@
   <div class="study-text ai-explanation" id="ai-text">{{ ticket.ai_explanation }}</div>
   <p class="sub" id="ai-meta">შენახულია ყველა მომხმარებლისთვის (ერთხელ გენერირებული).</p>
   {% else %}
-  <p class="sub" id="ai-hint">მოკლე, მაგრამ სრული ახსნა — რატომ სწორია და რატომ არა სხვები.</p>
+  <p class="sub" id="ai-hint">მოკლე, მაგრამ სრული ახსნა — რატომ სწორია და რატომ არა სხვები.{% if ai_provider %} · {{ ai_provider }}{% endif %}</p>
   <div class="study-text ai-explanation" id="ai-text" hidden></div>
   {% endif %}
   {% if gemini_ready %}
@@ -77,8 +77,11 @@
       if (typeof d.message === 'string' && d.message) return d.message;
       if (d.error && typeof d.error === 'object' && d.error.message) return d.error.message;
     }
+    if (typeof res.raw === 'string' && res.raw.trim()) {
+      return 'HTTP ' + res.status + ': ' + res.raw.trim().slice(0, 200);
+    }
     if (res.status === 502 || res.status === 504) {
-      return 'სერვერი ვერ მოასწრო პასუხი (ტაიმაუტი). სცადეთ თავიდან; თუ ხშირად ხდება — დააყენეთ GROQ_API_KEY.';
+      return 'ქსელის ტაიმაუტი (HTTP ' + res.status + '). სცადეთ თავიდან.';
     }
     return 'HTTP ' + res.status;
   }
@@ -109,15 +112,22 @@
       body: JSON.stringify({ regenerate: !!regenerate }),
     })
       .then(function (r) {
-        const ct = (r.headers.get('content-type') || '').toLowerCase();
-        if (!ct.includes('application/json')) {
-          throw new Error('სერვერმა JSON-ის ნაცვლად HTML დააბრუნა. განაახლეთ გვერდი ან შეამოწმეთ სერვერის განახლება.');
-        }
-        return r.json()
-          .catch(function () {
-            throw new Error('HTTP ' + r.status + ': პასუხი ვერ გაერკვა.');
-          })
-          .then(function (d) { return { ok: r.ok, status: r.status, d: d }; });
+        return r.text().then(function (raw) {
+          const ct = (r.headers.get('content-type') || '').toLowerCase();
+          let d = null;
+          if (ct.includes('application/json') && raw) {
+            try { d = JSON.parse(raw); } catch (e) { d = null; }
+          }
+          if (!d) {
+            const snippet = (raw || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+            throw new Error(
+              snippet
+                ? ('HTTP ' + r.status + ': ' + snippet)
+                : ('HTTP ' + r.status + ' (ცარიელი პასუხი)')
+            );
+          }
+          return { ok: r.ok, status: r.status, d: d, raw: raw };
+        });
       })
       .then(function (res) {
         if (!res.ok) throw new Error(apiError(res));
@@ -136,11 +146,11 @@
       .catch(function (e) {
         err.textContent = e.message || 'შეცდომა';
         err.hidden = false;
-        if (btn) {
+        if (btn && !btn.hidden) {
           btn.disabled = false;
           btn.textContent = 'ახსენი AI-ით';
         }
-        if (regen) {
+        if (regen && !regen.hidden) {
           regen.disabled = false;
           regen.textContent = 'ახსნის განახლება';
         }
