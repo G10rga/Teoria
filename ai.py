@@ -95,7 +95,7 @@ def _looks_incomplete(text: str, wrong_count: int) -> bool:
     stripped = text.strip()
     if len(stripped) < 80:
         return True
-    if "რატომ სწორია" not in stripped:
+    if "რატომაა სწორი" not in stripped and "რატომ სწორია" not in stripped:
         return True
     if wrong_count and "რატომ არა" not in stripped:
         return True
@@ -141,7 +141,7 @@ def _build_prompt(ticket) -> tuple[str, int]:
 
 სწორი პასუხი: ვარიანტი {correct_num}
 
-რატომ სწორია:
+რატომაა სწორი:
 - (2–3 მოკლე პუნქტი; თითო ერთი ან ორი წინადადება)
 - ...
 - ...
