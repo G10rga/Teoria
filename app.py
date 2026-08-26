@@ -360,13 +360,19 @@ def register_routes(app: Flask) -> None:
         try:
             text = ai_mod.explain_ticket(ticket)
         except ai_mod.AIError as exc:
-            return jsonify({"error": str(exc)}), 502
+            # Use 503 (not 502): Cloudflare often replaces origin 502 bodies with a
+            # generic gateway page, which made the UI show a fake "timeout".
+            return jsonify({"error": str(exc), "provider": ai_mod.ai_provider_name()}), 503
         except Exception as exc:
             app.logger.exception("unknown_explain failed for ticket %s", ticket_id)
-            return jsonify({"error": str(exc) or "სერვერის შეცდომა."}), 502
+            return jsonify({"error": str(exc) or "სერვერის შეცდომა."}), 500
         ticket.ai_explanation = text
         db.session.commit()
-        return jsonify({"explanation": text, "cached": False})
+        return jsonify({
+            "explanation": text,
+            "cached": False,
+            "provider": ai_mod.ai_provider_name(),
+        })
 
     @app.get("/history")
     @login_required
