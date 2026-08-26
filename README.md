@@ -88,7 +88,7 @@ Env vars:
 | `PREFERRED_URL_SCHEME` | `https` when the public URL is HTTPS. |
 | `TEORIA_ADMINS` | Comma-separated account emails that can open `/admin` (users, their progress, ticket edits). |
 | `GROQ_API_KEY` | Preferred free key from [Groq Console](https://console.groq.com) for AI explanations (fast). |
-| `GROQ_MODEL` | Optional. Default `llama-3.3-70b-versatile`. |
+| `GROQ_MODEL` | Optional. Default `openai/gpt-oss-120b` (replaces retired `llama-3.3-70b-versatile`). |
 | `GEMINI_API_KEY` | Alternate key from [Google AI Studio](https://aistudio.google.com/apikey). `GOOGLE_API_KEY` also works. |
 | `GEMINI_MODEL` | Optional. Default `gemini-2.5-flash`. |
 | `AI_PROVIDER` | `groq` or `gemini`. Auto: Groq if `GROQ_API_KEY` is set, else Gemini. |
