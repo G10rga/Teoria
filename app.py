@@ -337,7 +337,8 @@ def register_routes(app: Flask) -> None:
         return render_template(
             "unknown_study.html",
             ticket=ticket,
-            gemini_ready=ai_mod.gemini_configured(),
+            gemini_ready=ai_mod.ai_configured(),
+            ai_provider=ai_mod.ai_provider_name(),
         )
 
     @app.post("/unknown/<int:ticket_id>/explain")
@@ -352,11 +353,13 @@ def register_routes(app: Flask) -> None:
         regenerate = bool(data.get("regenerate"))
         if ticket.ai_explanation and not regenerate:
             return jsonify({"explanation": ticket.ai_explanation, "cached": True})
-        if not ai_mod.gemini_configured():
-            return jsonify({"error": "GEMINI_API_KEY არ არის დაყენებული."}), 503
+        if not ai_mod.ai_configured():
+            return jsonify({
+                "error": "AI გასაღები არ არის დაყენებული (GROQ_API_KEY ან GEMINI_API_KEY).",
+            }), 503
         try:
             text = ai_mod.explain_ticket(ticket)
-        except ai_mod.GeminiError as exc:
+        except ai_mod.AIError as exc:
             return jsonify({"error": str(exc)}), 502
         except Exception as exc:
             app.logger.exception("unknown_explain failed for ticket %s", ticket_id)

@@ -11,7 +11,7 @@ WorkingDirectory=/opt/teoria
 EnvironmentFile=/opt/teoria/.env
 Environment=FLASK_ENV=production
 # Cloudflared already occupies 8000/8001 on this host — bind loopback only.
-ExecStart=/opt/teoria/.venv/bin/gunicorn wsgi:app --bind 127.0.0.1:8012 --workers 3 --threads 2 --timeout 90 --forwarded-allow-ips=127.0.0.1
+ExecStart=/opt/teoria/.venv/bin/gunicorn wsgi:app --bind 127.0.0.1:8012 --workers 3 --threads 2 --timeout 120 --forwarded-allow-ips=127.0.0.1
 Restart=always
 RestartSec=3
 
