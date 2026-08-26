@@ -53,7 +53,7 @@
   <button class="btn btn-ghost btn-sm" type="button" id="ai-regen"
           {% if not ticket.ai_explanation %}hidden{% endif %}>ახსნის განახლება</button>
   {% else %}
-  <p class="sub">სერვერზე <code>GEMINI_API_KEY</code> არ არის დაყენებული.</p>
+  <p class="sub">სერვერზე <code>GROQ_API_KEY</code> ან <code>GEMINI_API_KEY</code> არ არის დაყენებული.</p>
   {% endif %}
   <p class="sub error" id="ai-error" hidden></p>
 </section>
@@ -77,8 +77,8 @@
       if (typeof d.message === 'string' && d.message) return d.message;
       if (d.error && typeof d.error === 'object' && d.error.message) return d.error.message;
     }
-    if (res.status === 502) {
-      return 'სერვერი ვერ უპასუხა (502). სცადეთ თავიდან ან დაელოდეთ 1 წუთს.';
+    if (res.status === 502 || res.status === 504) {
+      return 'სერვერი ვერ მოასწრო პასუხი (ტაიმაუტი). სცადეთ თავიდან; თუ ხშირად ხდება — დააყენეთ GROQ_API_KEY.';
     }
     return 'HTTP ' + res.status;
   }

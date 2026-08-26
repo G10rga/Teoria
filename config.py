@@ -63,3 +63,5 @@ class Config:
         if email.strip()
     )
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+    AI_PROVIDER = (os.environ.get("AI_PROVIDER") or "").strip().lower()
