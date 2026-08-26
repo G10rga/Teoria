@@ -87,11 +87,11 @@ Env vars:
 | `TEORIA_PORT` | Loopback port for gunicorn. Default `8012`. |
 | `PREFERRED_URL_SCHEME` | `https` when the public URL is HTTPS. |
 | `TEORIA_ADMINS` | Comma-separated account emails that can open `/admin` (users, their progress, ticket edits). |
-| `GROQ_API_KEY` | Preferred free key from [Groq Console](https://console.groq.com) for AI explanations (fast). |
-| `GROQ_MODEL` | Optional. Default `openai/gpt-oss-120b` (replaces retired `llama-3.3-70b-versatile`). |
-| `GEMINI_API_KEY` | Alternate key from [Google AI Studio](https://aistudio.google.com/apikey). `GOOGLE_API_KEY` also works. |
-| `GEMINI_MODEL` | Optional. Default `gemini-2.5-flash`. |
-| `AI_PROVIDER` | `groq` or `gemini`. Auto: Groq if `GROQ_API_KEY` is set, else Gemini. |
+| `GEMINI_API_KEY` | Preferred key from [Google AI Studio](https://aistudio.google.com/apikey) (better Georgian). `GOOGLE_API_KEY` also works. |
+| `GEMINI_MODEL` | Optional. Default `gemini-2.5-flash` (thinking disabled for speed). |
+| `GROQ_API_KEY` | Optional fast fallback from [Groq Console](https://console.groq.com). |
+| `GROQ_MODEL` | Optional. Default `openai/gpt-oss-120b`. |
+| `AI_PROVIDER` | `gemini` or `groq`. Auto: Gemini if `GEMINI_API_KEY` is set, else Groq. |
 | `PORT` | `app.run` and Procfile bind port (local / PaaS). |
 
 An existing local `prava.db` is still opened if `teoria.db` is missing.
