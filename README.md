@@ -117,8 +117,9 @@ so they drop out of later review exams.
 
 `exams.generate_cycle(user_id)` shuffles that user's copy of the bank once with
 `random.Random(seed).shuffle`, then slices it into chunks of 30 with an explicit
-no-overlap check. „ახალი ციკლი" reshuffles for that user only. Review exams and
-retakes intentionally reuse tickets.
+no-overlap check. „ახალი გადანაწილება“ reshuffles for that user and **resets** their
+ticket progress (mastered / mistakes / unknown pools). Exam history is kept.
+Review exams and retakes within a cycle intentionally reuse tickets.
 
 ## Exam rules
 

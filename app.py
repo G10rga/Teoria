@@ -188,6 +188,7 @@ def register_routes(app: Flask) -> None:
     def new_cycle():
         try:
             exams.generate_cycle(current_user.id)
+            flash("ახალი გადანაწილება მზადაა. პროგრესი განახლდა.", "ok")
         except RuntimeError as exc:
             flash(str(exc), "error")
         return redirect(url_for("dashboard"))

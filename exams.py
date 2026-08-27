@@ -28,6 +28,17 @@ def current_cycle(user_id: int) -> int:
     return int(val or 0)
 
 
+def _reset_learning_progress(user_id: int) -> None:
+    """Clear mastery / mistake / unknown state so a new redistribution starts fresh."""
+    db.session.query(TicketStat).filter(TicketStat.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.session.query(FailedQuestion).filter(
+        FailedQuestion.user_id == user_id,
+        FailedQuestion.resolved_at.is_(None),
+    ).update({FailedQuestion.resolved_at: utcnow()}, synchronize_session=False)
+
+
 def generate_cycle(user_id: int, seed: str | None = None) -> int:
     """Shuffle the whole ticket bank and cut it into non-overlapping exams for this user."""
     ticket_ids = [tid for (tid,) in db.session.query(Ticket.id).order_by(Ticket.id).all()]
@@ -42,7 +53,11 @@ def generate_cycle(user_id: int, seed: str | None = None) -> int:
     if len(shuffled) != len(set(shuffled)):
         raise RuntimeError("შემთხვევითი განაწილება დუბლიკატს შეიცავს — თავიდან სცადე.")
 
-    cycle = current_cycle(user_id) + 1
+    previous = current_cycle(user_id)
+    if previous > 0:
+        _reset_learning_progress(user_id)
+
+    cycle = previous + 1
     chunks = [
         shuffled[i : i + QUESTIONS_PER_EXAM]
         for i in range(0, len(shuffled), QUESTIONS_PER_EXAM)
@@ -354,10 +369,20 @@ def overview(user_id: int) -> dict:
         ).label("unknown"),
     ).filter(TicketStat.user_id == user_id).one()
 
-    attempts = db.session.query(
+    attempts_q = db.session.query(
         func.count(Attempt.id),
         func.coalesce(func.sum(case((Attempt.passed.is_(True), 1), else_=0)), 0),
-    ).filter(Attempt.user_id == user_id, Attempt.finished_at.isnot(None)).one()
+    ).filter(Attempt.user_id == user_id, Attempt.finished_at.isnot(None))
+    cycle = current_cycle(user_id)
+    if cycle:
+        attempts_q = attempts_q.filter(
+            Attempt.exam_id.in_(
+                db.session.query(Exam.id).filter(
+                    Exam.user_id == user_id, Exam.cycle == cycle,
+                )
+            )
+        )
+    attempts = attempts_q.one()
 
     missing_key = db.session.query(func.count(Ticket.id)).filter(Ticket.correct_index.is_(None)).scalar() or 0
     seen = int(stats.seen)

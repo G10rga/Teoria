@@ -16,7 +16,7 @@
       <button class="btn" {{ 'disabled' if not pending }}>შეცდომების გამოცდა ({{ pending }})</button>
     </form>
     <form method="post" action="{{ url_for('new_cycle') }}"
-          onsubmit="return confirm('ახალი გადანაწილება თავიდან არევს 921 ბილეთს. გავაგრძელოთ?')">
+          onsubmit="return confirm('ახალი გადანაწილება თავიდან არევს ბილეთებს და ნულდება პროგრესი (სწორად გაკეთებული, შეცდომები, უცნობი). გავაგრძელოთ?')">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="btn btn-ghost">ახალი გადანაწილება</button>
     </form>
