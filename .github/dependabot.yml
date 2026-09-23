@@ -1,14 +1,11 @@
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates
 version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/"
     target-branch: "main"
     schedule:
-      interval: "cron"
-      # ~every 4 days (1st, 5th, 9th, … of each month) at 09:00
-      cronjob: "0 9 */4 * *"
-      timezone: "Asia/Tbilisi"
+      interval: "weekly"
+      day: "monday"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -18,11 +15,12 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "main"
-    interval: "cron"
-      cronjob: "0 9 */4 * *"
-      timezone: "Asia/Tbilisi"
+    schedule:
+      interval: "weekly"
+      day: "monday"
     open-pull-requests-limit: 3
     labels:
       - "dependencies"
     commit-message:
       prefix: "ci"
+      
