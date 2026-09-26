@@ -7,6 +7,6 @@ email-validator>=2.0
 python-dotenv>=1.0
 psycopg[binary]>=3.3.6
 gunicorn>=26.2.0
-requests>=2.31
+requests>=2.34.2
 beautifulsoup4>=4.12
 lxml>=5.0
